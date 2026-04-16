@@ -30,10 +30,10 @@ export function Hero() {
 
         <div className="mt-10 flex flex-wrap items-center gap-3">
           <Link
-            href="#architecture"
+            href="/signup"
             className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
           >
-            View architecture
+            Get started
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
@@ -43,14 +43,16 @@ export function Hero() {
             </svg>
           </Link>
           <Link
-            href="https://github.com/pmxlr8/research-summarizer"
-            target="_blank"
+            href="/login"
             className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white/70 px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm backdrop-blur transition hover:bg-white dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-900"
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 007.86 10.92c.58.1.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.69-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.74-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.44-2.27 1.18-3.07-.12-.3-.51-1.46.12-3.05 0 0 .97-.31 3.17 1.17a10.95 10.95 0 015.77 0c2.2-1.48 3.17-1.17 3.17-1.17.63 1.59.24 2.76.12 3.05.74.8 1.18 1.82 1.18 3.07 0 4.41-2.7 5.38-5.27 5.67.41.35.78 1.05.78 2.12 0 1.53-.01 2.76-.01 3.14 0 .31.21.67.8.55A11.5 11.5 0 0023.5 12C23.5 5.65 18.35.5 12 .5z" />
-            </svg>
-            View on GitHub
+            Sign in
+          </Link>
+          <Link
+            href="#architecture"
+            className="inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-slate-700 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+          >
+            View architecture ↓
           </Link>
         </div>
 
