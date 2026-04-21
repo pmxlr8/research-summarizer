@@ -54,3 +54,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# CDK deploy outputs (contains real AWS resource IDs)
+infra/cdk-outputs.json

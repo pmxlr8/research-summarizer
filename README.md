@@ -15,40 +15,27 @@ A serverless AWS platform that searches open-access academic repositories (arXiv
 
 ## Architecture
 
-See `docs/Architecture.png` for the full topology diagram. In one sentence: a static Next.js frontend served from S3 via CloudFront, a Cognito-authenticated REST API Gateway routing to Lambda handlers, an asynchronous summarization pipeline orchestrated by Step Functions, and a DynamoDB single-table store for users, jobs, and summaries.
-
-![Architecture](docs/Architecture.png)
+![Architecture](docs/diagrams/Architecture.png)
 
 ## Repository Layout
 
 ```
 research-summarizer/
 ├── apps/
-│   ├── web/                   # Next.js 14 frontend (TypeScript + Tailwind)
-│   └── api/                   # Lambda handler code (Week 3+)
-│       └── handlers/
-│           ├── search.ts
-│           ├── submit-job.ts
-│           ├── get-summary.ts
-│           └── pipeline/
-│               ├── fetch-pdf.ts
-│               ├── extract-text.ts
-│               ├── chunk.ts
-│               ├── map-summarize.ts
-│               └── reduce-summary.ts
-├── packages/
-│   └── shared/                # TypeScript types shared between web and api
-├── infra/                     # AWS CDK (infrastructure as code)
-│   ├── bin/app.ts
-│   └── lib/
-│       ├── frontend-stack.ts
-│       ├── auth-stack.ts
-│       ├── api-stack.ts
-│       ├── data-stack.ts
-│       └── pipeline-stack.ts
-├── docs/                      # Architecture diagrams, reports, proposals
-├── scripts/                   # Helper scripts
-└── .github/workflows/         # CI/CD
+│   ├── web/                        # Next.js 14 frontend
+│   │   ├── app/                    # Pages and components
+│   │   ├── lib/                    # Auth, API client, types
+│   │   └── data/                   # Mock data (replaced by real API in Phase 2+)
+│   └── api/                        # Lambda handlers (Phase 2+)
+├── infra/                          # AWS CDK — all infrastructure as code
+│   ├── bin/app.ts                  # Stack entry point
+│   └── lib/                        # One stack per architectural layer
+├── docs/
+│   ├── reports/                    # PDFs: Week 2 report, proposal, execution guide
+│   └── diagrams/                   # Architecture diagrams (PNG + SVG)
+├── packages/shared/                # Shared TypeScript types (Phase 2+)
+├── scripts/deploy.sh               # One-command deploy
+└── .github/workflows/ci.yml        # Lint + build on every PR
 ```
 
 ## Local Development
@@ -74,21 +61,17 @@ npx cdk diff         # shows changes vs deployed stack
 
 ## Documentation
 
-All design artifacts live in `docs/`:
-
-| File | What it is |
+| Folder | Contents |
 |---|---|
-| `Week2_Report.pdf` | Week 2 progress report (architecture, WAF mapping, SLOs) |
-| `Team_Proposal_Upgrades.pdf` | Proposed upgrades to the Week 2 design — tiered by priority |
-| `Project_Execution_Guide.pdf` | Service-by-service explanation, six-phase plan, repo conventions |
-| `Architecture.png` / `.svg` | Architecture diagram (landscape, for documents) |
-| `Architecture_Vertical.png` / `.svg` | Architecture diagram (portrait, for slides) |
+| `docs/reports/` | Week 2 report, upgrade proposal, execution guide (PDFs) |
+| `docs/diagrams/` | Architecture diagrams — landscape + vertical (PNG + SVG) |
+| `docs/Remaining_Work.md` | Task breakdown per ownership area |
 
 ## Status
 
-**Week 2 — design phase complete.** Week 3 kicks off Phase 0 (foundation): AWS account setup, CDK scaffold, CI workflow, and the first end-to-end deployment of a "walking skeleton".
+**Phase 1 complete — deployed and live at https://d24irdkbe9jj2b.cloudfront.net**
 
-Phase checkpoints are tracked in `docs/Project_Execution_Guide.pdf` (§4).
+Cognito auth, API Gateway, DynamoDB, SQS, CloudFront all provisioned. Frontend shows mock data until backend Lambda handlers are implemented (Phase 2+).
 
 ## Tech Stack
 
