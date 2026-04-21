@@ -1,0 +1,32 @@
+{
+  "Summarizer-dev-Auth": {
+    "ExportsOutputFnGetAttUserPool6BA7E5F2Arn686ACC00": "arn:aws:cognito-idp:us-east-1:032474760977:userpool/us-east-1_Y7IjzOHXK",
+    "UserPoolClientId": "32h6vft5iqsdjbnl37b3j51hiv",
+    "UserPoolId": "us-east-1_Y7IjzOHXK",
+    "ExportsOutputRefUserPoolWebClient4C9370B02E2C9FF9": "32h6vft5iqsdjbnl37b3j51hiv",
+    "ExportsOutputRefUserPool6BA7E5F296FD7236": "us-east-1_Y7IjzOHXK"
+  },
+  "Summarizer-dev-Pipeline": {
+    "ExportsOutputRefJobsQueue86ED6666E80AB877": "https://sqs.us-east-1.amazonaws.com/032474760977/Summarizer-dev-Pipeline-JobsQueue86ED6666-rhq7nLwqt6rl",
+    "JobsQueueUrl": "https://sqs.us-east-1.amazonaws.com/032474760977/Summarizer-dev-Pipeline-JobsQueue86ED6666-rhq7nLwqt6rl",
+    "DLQUrl": "https://sqs.us-east-1.amazonaws.com/032474760977/Summarizer-dev-Pipeline-DLQ581697C4-xMC7DfD2SeGp"
+  },
+  "Summarizer-dev-Data": {
+    "TableName": "Summarizer-dev-Data-MainTable74195DAB-1VLNC9IHTOOKR",
+    "ExportsOutputRefMainTable74195DAB4503BD7E": "Summarizer-dev-Data-MainTable74195DAB-1VLNC9IHTOOKR",
+    "PdfBucketName": "summarizer-dev-data-pdfbucketfa9e115a-25rljpdfqwwq"
+  },
+  "Summarizer-dev-Api": {
+    "ApiEndpoint4F160690": "https://2nnh105h8a.execute-api.us-east-1.amazonaws.com/v1/",
+    "ExportsOutputRefApiF70053CD5653BA4D": "2nnh105h8a",
+    "ExportsOutputRefApiDeploymentStagev102147F91576080D6": "v1",
+    "ApiEndpoint": "https://2nnh105h8a.execute-api.us-east-1.amazonaws.com/v1/"
+  },
+  "Summarizer-dev-Frontend": {
+    "DistributionDomain": "d24irdkbe9jj2b.cloudfront.net",
+    "UserPoolClientId": "32h6vft5iqsdjbnl37b3j51hiv",
+    "UserPoolId": "us-east-1_Y7IjzOHXK",
+    "SiteBucketName": "summarizer-dev-frontend-sitebucket397a1860-nhya3rmcnk7a",
+    "ApiEndpoint": "https://2nnh105h8a.execute-api.us-east-1.amazonaws.com/v1/"
+  }
+}
