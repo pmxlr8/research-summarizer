@@ -4,12 +4,14 @@ import { mockPapers } from "@/data/mock-papers";
 import { mockSummaries } from "@/data/mock-summaries";
 
 /**
- * Dual-mode API client.
+ * Dual-mode API client with graceful fallback.
  *
- * - If NEXT_PUBLIC_API_URL is set → calls real API Gateway with JWT auth.
- * - Otherwise → returns mocks with a simulated network delay.
+ * - If NEXT_PUBLIC_API_URL is set → tries the real API Gateway first.
+ * - If the real call fails (endpoint not deployed yet) → falls back to mocks.
+ * - If NEXT_PUBLIC_API_URL is not set → uses mocks directly.
  *
- * Call sites never change — swap is purely via env vars.
+ * This means mock data shows until the actual Lambda handlers are deployed.
+ * No frontend code changes needed when backend endpoints come online.
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -42,11 +44,16 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 // ─── Search ─────────────────────────────────────────────────────────
 
 export async function searchPapers(query: string): Promise<Paper[]> {
-  if (USE_REAL) {
-    return apiFetch<Paper[]>(`search?q=${encodeURIComponent(query)}`);
-  }
   const q = query.trim().toLowerCase();
   if (!q) return delay([]);
+
+  if (USE_REAL) {
+    try {
+      return await apiFetch<Paper[]>(`search?q=${encodeURIComponent(query)}`);
+    } catch {
+      // endpoint not deployed yet — fall back to mocks
+    }
+  }
   return delay(
     mockPapers.filter(
       (p) =>
@@ -60,7 +67,13 @@ export async function searchPapers(query: string): Promise<Paper[]> {
 // ─── Summaries ──────────────────────────────────────────────────────
 
 export async function listSummaries(): Promise<Summary[]> {
-  if (USE_REAL) return apiFetch<Summary[]>("summaries");
+  if (USE_REAL) {
+    try {
+      return await apiFetch<Summary[]>("summaries");
+    } catch {
+      // endpoint not deployed yet — fall back to mocks
+    }
+  }
   return delay(mockSummaries);
 }
 
@@ -69,7 +82,7 @@ export async function getSummary(id: string): Promise<Summary | null> {
     try {
       return await apiFetch<Summary>(`summaries/${id}`);
     } catch {
-      return null;
+      // fall back to mocks
     }
   }
   return delay(mockSummaries.find((s) => s.id === id) ?? null);
@@ -79,10 +92,14 @@ export async function submitSummary(
   paperId: string,
 ): Promise<{ jobId: string }> {
   if (USE_REAL) {
-    return apiFetch<{ jobId: string }>("summarize", {
-      method: "POST",
-      body: JSON.stringify({ paperId }),
-    });
+    try {
+      return await apiFetch<{ jobId: string }>("summarize", {
+        method: "POST",
+        body: JSON.stringify({ paperId }),
+      });
+    } catch {
+      // fall back to mock
+    }
   }
   return delay({ jobId: `job-${Date.now()}-${paperId}` });
 }
