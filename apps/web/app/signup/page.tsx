@@ -22,9 +22,7 @@ export default function SignupPage() {
       if (password.length < 8) throw new Error("Password must be at least 8 characters");
       const result = await signUp(email, password, name || undefined);
       if (result.needsConfirmation) {
-        // Cognito requires email verification — for now redirect to login
-        alert("Check your email for a verification code, then sign in.");
-        router.push("/login");
+        router.push(`/confirm?email=${encodeURIComponent(email)}`);
       } else {
         router.push("/app");
       }
