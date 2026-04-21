@@ -1,20 +1,65 @@
 "use client";
 
 import type { User } from "./types";
+import {
+  CognitoUserPool,
+  CognitoUser,
+  AuthenticationDetails,
+  CognitoUserAttribute,
+  type CognitoUserSession,
+} from "amazon-cognito-identity-js";
 
 /**
- * Stub auth layer — stores a fake user in localStorage.
- * Phase 1 will replace this with Cognito (via amazon-cognito-identity-js
- * or amplify/auth). The API surface below matches what we'll keep.
+ * Dual-mode auth layer.
+ *
+ * - If NEXT_PUBLIC_USER_POOL_ID and NEXT_PUBLIC_USER_POOL_CLIENT_ID are set
+ *   → real Cognito SRP flow.
+ * - Otherwise → localStorage mock (same UX, zero AWS cost).
+ *
+ * Call sites (login/signup pages, app layout) don't need to know which mode
+ * is active.
  */
 
-const KEY = "rs.session";
+const POOL_ID = process.env.NEXT_PUBLIC_USER_POOL_ID ?? "";
+const CLIENT_ID = process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID ?? "";
+const USE_REAL = !!(POOL_ID && CLIENT_ID);
+
+const pool = USE_REAL
+  ? new CognitoUserPool({ UserPoolId: POOL_ID, ClientId: CLIENT_ID })
+  : null;
+
+// ─── Public types ───────────────────────────────────────────────────
 
 export type Session = { user: User; token: string };
 
+// ─── Get current session ────────────────────────────────────────────
+
 export function getSession(): Session | null {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(KEY);
+
+  if (USE_REAL && pool) {
+    const cognitoUser = pool.getCurrentUser();
+    if (!cognitoUser) return null;
+    let session: CognitoUserSession | null = null;
+    cognitoUser.getSession(
+      (err: Error | null, s: CognitoUserSession | null) => {
+        if (!err && s?.isValid()) session = s;
+      },
+    );
+    if (!session) return null;
+    const payload = (session as CognitoUserSession).getIdToken().payload;
+    return {
+      user: {
+        id: payload.sub as string,
+        email: payload.email as string,
+        name: (payload.name as string) ?? (payload.email as string),
+      },
+      token: (session as CognitoUserSession).getIdToken().getJwtToken(),
+    };
+  }
+
+  // Mock mode
+  const raw = window.localStorage.getItem("rs.session");
   if (!raw) return null;
   try {
     return JSON.parse(raw) as Session;
@@ -23,8 +68,36 @@ export function getSession(): Session | null {
   }
 }
 
-export function signIn(email: string, password: string): Session {
-  void password; // real Cognito SRP flow wired in Phase 1
+// ─── Sign in ────────────────────────────────────────────────────────
+
+export function signIn(email: string, password: string): Promise<Session> {
+  if (USE_REAL && pool) {
+    return new Promise((resolve, reject) => {
+      const cognitoUser = new CognitoUser({ Username: email, Pool: pool! });
+      const authDetails = new AuthenticationDetails({
+        Username: email,
+        Password: password,
+      });
+      cognitoUser.authenticateUser(authDetails, {
+        onSuccess(result) {
+          const payload = result.getIdToken().payload;
+          resolve({
+            user: {
+              id: payload.sub as string,
+              email: payload.email as string,
+              name: (payload.name as string) ?? (payload.email as string),
+            },
+            token: result.getIdToken().getJwtToken(),
+          });
+        },
+        onFailure(err) {
+          reject(new Error(err.message ?? "Authentication failed"));
+        },
+      });
+    });
+  }
+
+  // Mock mode
   const session: Session = {
     user: {
       id: `u-${Math.random().toString(36).slice(2, 10)}`,
@@ -33,20 +106,73 @@ export function signIn(email: string, password: string): Session {
     },
     token: `mock.${Math.random().toString(36).slice(2)}`,
   };
-  window.localStorage.setItem(KEY, JSON.stringify(session));
-  return session;
+  window.localStorage.setItem("rs.session", JSON.stringify(session));
+  return Promise.resolve(session);
 }
 
-export function signUp(email: string, password: string, name?: string): Session {
-  const s = signIn(email, password);
-  if (name) {
-    s.user.name = name;
-    window.localStorage.setItem(KEY, JSON.stringify(s));
+// ─── Sign up ────────────────────────────────────────────────────────
+
+export function signUp(
+  email: string,
+  password: string,
+  name?: string,
+): Promise<{ needsConfirmation: boolean; session?: Session }> {
+  if (USE_REAL && pool) {
+    return new Promise((resolve, reject) => {
+      const attrs: CognitoUserAttribute[] = [
+        new CognitoUserAttribute({ Name: "email", Value: email }),
+      ];
+      if (name) {
+        attrs.push(new CognitoUserAttribute({ Name: "name", Value: name }));
+      }
+      pool!.signUp(email, password, attrs, [], (err, result) => {
+        if (err) return reject(new Error(err.message ?? "Signup failed"));
+        resolve({ needsConfirmation: !result?.userConfirmed });
+      });
+    });
   }
-  return s;
+
+  // Mock mode — sign in immediately
+  return signIn(email, password).then((s) => ({
+    needsConfirmation: false,
+    session: s,
+  }));
 }
+
+// ─── Confirm signup (verification code) ─────────────────────────────
+
+export function confirmSignUp(email: string, code: string): Promise<void> {
+  if (USE_REAL && pool) {
+    return new Promise((resolve, reject) => {
+      const cognitoUser = new CognitoUser({ Username: email, Pool: pool! });
+      cognitoUser.confirmRegistration(code, true, (err) => {
+        if (err) return reject(new Error(err.message ?? "Confirmation failed"));
+        resolve();
+      });
+    });
+  }
+  return Promise.resolve();
+}
+
+// ─── Sign out ───────────────────────────────────────────────────────
 
 export function signOut(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(KEY);
+  if (USE_REAL && pool) {
+    const user = pool.getCurrentUser();
+    user?.signOut();
+    return;
+  }
+  window.localStorage.removeItem("rs.session");
 }
+
+// ─── Helper: get current JWT (for API calls) ────────────────────────
+
+export function getToken(): string | null {
+  const s = getSession();
+  return s?.token ?? null;
+}
+
+// ─── Expose mode for debugging ──────────────────────────────────────
+
+export const authMode: "cognito" | "mock" = USE_REAL ? "cognito" : "mock";

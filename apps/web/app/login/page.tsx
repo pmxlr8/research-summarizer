@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (!email || !password) throw new Error("Email and password required");
-      signIn(email, password);
+      await signIn(email, password);
       router.push("/app");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
