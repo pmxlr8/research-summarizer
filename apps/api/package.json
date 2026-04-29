@@ -1,0 +1,19 @@
+{
+  "name": "@research-summarizer/api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

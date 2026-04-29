@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": true,
+    "outDir": "dist",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "@types/aws-lambda"]
+  },
+  "include": ["handlers/**/*", "lib/**/*", "tests/**/*"]
+}
