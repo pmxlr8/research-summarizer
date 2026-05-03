@@ -12,7 +12,30 @@ export default function DashboardPage() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    listSummaries().then(setSummaries);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    async function refresh() {
+      try {
+        const next = await listSummaries();
+        if (cancelled) return;
+        setSummaries(next);
+        // If anything is still in flight, poll again in 5s.
+        const inFlight = next.some((s) => s.status === "pending" || s.status === "running");
+        if (inFlight) {
+          timer = setTimeout(refresh, 5000);
+        }
+      } catch {
+        // Best-effort; surface no error UI on a poll miss.
+        if (!cancelled) timer = setTimeout(refresh, 10_000);
+      }
+    }
+
+    refresh();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   function handleSearch(e: React.FormEvent) {

@@ -62,9 +62,17 @@ export function buildUrl(opts: SearchOptions): string {
 }
 
 export function buildSearchQuery(q: string, categories?: string[]): string {
-  // arXiv treats space as ' ' or '+' (URLSearchParams will encode). Combine
-  // category filter with the user's text query.
-  const base = `all:${q.trim()}`;
+  // arXiv's `all:` field uses OR-style matching across whitespace-split tokens
+  // by default, so a multi-word query like "attention is all you need" returns
+  // any paper containing any of those words. We boost precision by:
+  //   1. Searching with the phrase quoted in the title field (highest precedence)
+  //   2. OR-ing with the same phrase quoted across all fields (catches cases
+  //      where the exact title isn't matched word-for-word).
+  const trimmed = q.trim().replace(/"/g, "");
+  const isPhrase = /\s/.test(trimmed);
+  const base = isPhrase
+    ? `(ti:"${trimmed}" OR all:"${trimmed}")`
+    : `all:${trimmed}`;
   if (!categories || categories.length === 0) return base;
   const cats = categories.map((c) => `cat:${c}`).join(" OR ");
   return `${base} AND (${cats})`;

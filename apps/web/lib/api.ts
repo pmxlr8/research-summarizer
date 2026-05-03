@@ -89,19 +89,18 @@ export async function getSummary(id: string): Promise<Summary | null> {
 }
 
 export async function submitSummary(
-  paperId: string,
+  paper: Paper,
 ): Promise<{ jobId: string }> {
   if (USE_REAL) {
-    try {
-      return await apiFetch<{ jobId: string }>("summarize", {
-        method: "POST",
-        body: JSON.stringify({ paperId }),
-      });
-    } catch {
-      // fall back to mock
-    }
+    // Real backend needs the full paper object (pdfUrl, title, etc.) to
+    // start the pipeline. Don't catch errors — let the UI handle them so
+    // we don't silently fall back to a fake job id.
+    return apiFetch<{ jobId: string }>("summarize", {
+      method: "POST",
+      body: JSON.stringify({ paper }),
+    });
   }
-  return delay({ jobId: `job-${Date.now()}-${paperId}` });
+  return delay({ jobId: `mock-${Date.now()}-${paper.id}` });
 }
 
 // ─── Health check (Phase 1 verification) ────────────────────────────

@@ -6,7 +6,6 @@ import {
   CognitoUser,
   AuthenticationDetails,
   CognitoUserAttribute,
-  type CognitoUserSession,
 } from "amazon-cognito-identity-js";
 
 /**
@@ -40,21 +39,20 @@ export function getSession(): Session | null {
   if (USE_REAL && pool) {
     const cognitoUser = pool.getCurrentUser();
     if (!cognitoUser) return null;
-    let session: CognitoUserSession | null = null;
-    cognitoUser.getSession(
-      (err: Error | null, s: CognitoUserSession | null) => {
-        if (!err && s?.isValid()) session = s;
-      },
-    );
-    if (!session) return null;
-    const payload = (session as CognitoUserSession).getIdToken().payload;
+    // getSession() hydrates tokens from localStorage *synchronously* even
+    // though it takes a callback — the callback runs in-line. After it
+    // returns, getSignInUserSession() exposes the cached session.
+    cognitoUser.getSession(() => {});
+    const session = cognitoUser.getSignInUserSession();
+    if (!session?.isValid()) return null;
+    const payload = session.getIdToken().payload;
     return {
       user: {
         id: payload.sub as string,
         email: payload.email as string,
         name: (payload.name as string) ?? (payload.email as string),
       },
-      token: (session as CognitoUserSession).getIdToken().getJwtToken(),
+      token: session.getIdToken().getJwtToken(),
     };
   }
 

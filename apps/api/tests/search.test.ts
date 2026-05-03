@@ -61,11 +61,14 @@ describe("search handler", () => {
     expect(p).toHaveProperty("pdfUrl");
   });
 
-  it("upstream 503 returns 502", async () => {
-    stubFetchOnce("oops", 503);
+  it("upstream 503 returns 502 after retries exhaust", async () => {
+    // Always return 503 so all 3 retry attempts fail.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("oops", { status: 503 }) as unknown as Response
+    );
     const { handler } = await import("../handlers/search");
     const res = await handler(makeEvent({ q: "transformer" }));
     expect(res.statusCode).toBe(502);
     expect(JSON.parse(res.body).error).toBe("upstream_error");
-  });
+  }, 30_000);
 });

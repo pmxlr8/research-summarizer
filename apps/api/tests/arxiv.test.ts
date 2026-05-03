@@ -6,8 +6,14 @@ import { buildSearchQuery, buildUrl, parseAtom, searchArxiv, UpstreamError } fro
 const fixture = readFileSync(join(__dirname, "fixtures/arxiv-transformer.xml"), "utf-8");
 
 describe("buildSearchQuery", () => {
-  it("wraps the query in all:", () => {
-    expect(buildSearchQuery("transformer healthcare")).toBe("all:transformer healthcare");
+  it("uses all: for single-word queries", () => {
+    expect(buildSearchQuery("transformer")).toBe("all:transformer");
+  });
+
+  it("phrase-quotes multi-word queries with title boost", () => {
+    expect(buildSearchQuery("transformer healthcare")).toBe(
+      `(ti:"transformer healthcare" OR all:"transformer healthcare")`
+    );
   });
 
   it("appends category filter when provided", () => {

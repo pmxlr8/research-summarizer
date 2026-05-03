@@ -31,12 +31,15 @@ function SearchInner() {
     if (q) router.push(`/app/search?q=${encodeURIComponent(q)}`);
   }
 
-  async function handleSummarize(paperId: string) {
-    setSubmitting(paperId);
+  async function handleSummarize(paper: Paper) {
+    setSubmitting(paper.id);
     try {
-      const { jobId } = await submitSummary(paperId);
-      alert(`Summary job submitted: ${jobId}\n\nIn production, you'd see this on your dashboard once it completes.`);
-    } finally {
+      await submitSummary(paper);
+      // Send the user to the dashboard where they'll see it as Pending →
+      // Running → Done via the polling logic.
+      router.push("/app");
+    } catch (err) {
+      alert(`Failed to submit: ${(err as Error).message}`);
       setSubmitting(null);
     }
   }
@@ -90,7 +93,7 @@ function SearchInner() {
                   key={p.id}
                   paper={p}
                   submitting={submitting === p.id}
-                  onSummarize={() => handleSummarize(p.id)}
+                  onSummarize={() => handleSummarize(p)}
                 />
               ))}
             </ul>
