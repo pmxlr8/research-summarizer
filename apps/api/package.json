@@ -8,11 +8,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "fast-xml-parser": "^4.5.0"
+    "@aws-sdk/client-bedrock-runtime": "^3.1041.0",
+    "@aws-sdk/client-dynamodb": "^3.1041.0",
+    "@aws-sdk/client-s3": "^3.1041.0",
+    "@aws-sdk/client-sfn": "^3.1041.0",
+    "@aws-sdk/client-sqs": "^3.1041.0",
+    "@aws-sdk/lib-dynamodb": "^3.1041.0",
+    "fast-xml-parser": "^4.5.0",
+    "pdf-parse": "^1.1.1",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.145",
+    "@types/aws-lambda": "^8.10.161",
     "@types/node": "^20.11.0",
+    "@types/uuid": "^10.0.0",
     "typescript": "^5.4.0",
     "vitest": "^2.1.0"
   }

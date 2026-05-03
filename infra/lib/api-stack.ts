@@ -7,6 +7,7 @@ import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as logs from "aws-cdk-lib/aws-logs";
 
 interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
@@ -110,6 +111,54 @@ export class ApiStack extends cdk.Stack {
     api.root
       .addResource("search")
       .addMethod("GET", new apigw.LambdaIntegration(searchFn), authProps);
+
+    // Phase 3: job submission, retrieval, listing.
+    const handlerProps = {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      projectRoot: apiRoot,
+      depsLockFilePath: path.join(apiRoot, "package-lock.json"),
+      handler: "handler",
+      bundling: { externalModules: ["@aws-sdk/*"], minify: true },
+      environment: {
+        TABLE_NAME: props.table.tableName,
+        JOBS_QUEUE_URL: props.jobsQueue.queueUrl,
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    } satisfies Partial<nodejs.NodejsFunctionProps>;
+
+    const submitJobFn = new nodejs.NodejsFunction(this, "SubmitJobFn", {
+      ...handlerProps,
+      entry: path.join(apiRoot, "handlers", "submit-job.ts"),
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 256,
+    });
+    props.table.grantReadWriteData(submitJobFn);
+    props.jobsQueue.grantSendMessages(submitJobFn);
+
+    const getSummaryFn = new nodejs.NodejsFunction(this, "GetSummaryFn", {
+      ...handlerProps,
+      entry: path.join(apiRoot, "handlers", "get-summary.ts"),
+      timeout: cdk.Duration.seconds(5),
+      memorySize: 256,
+    });
+    props.table.grantReadData(getSummaryFn);
+
+    const listSummariesFn = new nodejs.NodejsFunction(this, "ListSummariesFn", {
+      ...handlerProps,
+      entry: path.join(apiRoot, "handlers", "list-summaries.ts"),
+      timeout: cdk.Duration.seconds(5),
+      memorySize: 256,
+    });
+    props.table.grantReadData(listSummariesFn);
+
+    const summarize = api.root.addResource("summarize");
+    summarize.addMethod("POST", new apigw.LambdaIntegration(submitJobFn), authProps);
+
+    const summaries = api.root.addResource("summaries");
+    summaries.addMethod("GET", new apigw.LambdaIntegration(listSummariesFn), authProps);
+
+    const summaryById = summaries.addResource("{id}");
+    summaryById.addMethod("GET", new apigw.LambdaIntegration(getSummaryFn), authProps);
 
     this.apiEndpoint = api.url;
     new cdk.CfnOutput(this, "ApiEndpoint", { value: api.url });
