@@ -35,14 +35,42 @@ export class FrontendStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    // Rewrite /foo/ → /foo/index.html (S3 doesn't act like a webserver and
+    // resolve directory indexes for sub-paths). Without this, every nested
+    // route returns the landing page via the 403 → /index.html fallback.
+    const rewriter = new cloudfront.Function(this, "PathRewriter", {
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+      code: cloudfront.FunctionCode.fromInline(`
+        function handler(event) {
+          var req = event.request;
+          var uri = req.uri;
+          if (uri.endsWith('/')) {
+            req.uri = uri + 'index.html';
+          } else if (!uri.includes('.')) {
+            // bare path like /signup → /signup/index.html
+            req.uri = uri + '/index.html';
+          }
+          return req;
+        }
+      `),
+    });
+
     this.distribution = new cloudfront.Distribution(this, "Distribution", {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(this.siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        functionAssociations: [
+          {
+            function: rewriter,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
       },
       defaultRootObject: "index.html",
       errorResponses: [
+        // SPA fallback for genuinely unknown routes (e.g. /app/summary/<id>
+        // for a real summary id that isn't pre-rendered).
         { httpStatus: 403, responseHttpStatus: 200, responsePagePath: "/index.html" },
         { httpStatus: 404, responseHttpStatus: 200, responsePagePath: "/index.html" },
       ],
