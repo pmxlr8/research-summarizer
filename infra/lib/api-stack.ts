@@ -1,7 +1,9 @@
+import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as apigw from "aws-cdk-lib/aws-apigateway";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as sqs from "aws-cdk-lib/aws-sqs";
@@ -87,6 +89,27 @@ export class ApiStack extends cdk.Stack {
     api.root
       .addResource("health")
       .addMethod("GET", new apigw.LambdaIntegration(healthFn), authProps);
+
+    // Phase 2: search handler — calls arXiv API, returns Paper[]
+    const apiRoot = path.join(__dirname, "..", "..", "apps", "api");
+    const searchFn = new nodejs.NodejsFunction(this, "SearchFn", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(apiRoot, "handlers", "search.ts"),
+      handler: "handler",
+      projectRoot: apiRoot,
+      depsLockFilePath: path.join(apiRoot, "package-lock.json"),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 512,
+      bundling: {
+        // fast-xml-parser is the only runtime dep; bundle it.
+        externalModules: ["@aws-sdk/*"],
+        minify: true,
+      },
+    });
+
+    api.root
+      .addResource("search")
+      .addMethod("GET", new apigw.LambdaIntegration(searchFn), authProps);
 
     this.apiEndpoint = api.url;
     new cdk.CfnOutput(this, "ApiEndpoint", { value: api.url });

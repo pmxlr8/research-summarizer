@@ -2,7 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import type { Paper } from "./types";
 
 const ARXIV_ENDPOINT = "https://export.arxiv.org/api/query";
-const DEFAULT_TIMEOUT_MS = 12_000;
+const DEFAULT_TIMEOUT_MS = 8_000;
 
 export class UpstreamError extends Error {
   constructor(message: string, public cause?: unknown) {
@@ -71,6 +71,28 @@ export function buildSearchQuery(q: string, categories?: string[]): string {
 }
 
 async function httpGet(url: string, timeoutMs: number, fetchImpl: typeof fetch): Promise<string> {
+  // arXiv asks for a 3s delay between requests and may return 429 from
+  // shared AWS Lambda IPs. Retry with backoff on transient errors (429, 5xx).
+  const maxAttempts = 3;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await singleHttpGet(url, timeoutMs, fetchImpl);
+    } catch (err) {
+      lastErr = err;
+      // Retry on rate-limit, server errors, and timeouts.
+      const transient =
+        err instanceof UpstreamTimeoutError ||
+        (err instanceof UpstreamError && /HTTP (429|5\d\d)/.test(err.message));
+      if (!transient || attempt === maxAttempts) throw err;
+      // Exponential backoff: 1.5s, 3s, then give up.
+      await new Promise((r) => setTimeout(r, attempt * 1500));
+    }
+  }
+  throw lastErr;
+}
+
+async function singleHttpGet(url: string, timeoutMs: number, fetchImpl: typeof fetch): Promise<string> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
