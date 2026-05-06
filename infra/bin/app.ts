@@ -6,6 +6,7 @@ import { AuthStack } from "../lib/auth-stack";
 import { DataStack } from "../lib/data-stack";
 import { ApiStack } from "../lib/api-stack";
 import { PipelineStack } from "../lib/pipeline-stack";
+import { OpsStack } from "../lib/ops-stack";
 
 const app = new cdk.App();
 
@@ -36,6 +37,18 @@ const frontend = new FrontendStack(app, `${prefix}-Frontend`, {
   apiEndpoint: api.apiEndpoint,
   userPoolId: auth.userPool.userPoolId,
   userPoolClientId: auth.userPoolClient.userPoolClientId,
+});
+
+new OpsStack(app, `${prefix}-Ops`, {
+  env,
+  alertEmail: app.node.tryGetContext("alertEmail") ?? "pranjalm74@gmail.com",
+  monthlyBudgetUsd: 50,
+  jobsQueue: pipeline.jobsQueue,
+  deadLetterQueue: pipeline.deadLetterQueue,
+  stateMachine: pipeline.stateMachine,
+  apiName: api.apiName,
+  pipelineFns: pipeline.pipelineFns,
+  apiFns: api.handlerFns,
 });
 
 cdk.Tags.of(app).add("Project", "research-summarizer");

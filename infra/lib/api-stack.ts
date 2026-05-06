@@ -29,6 +29,8 @@ interface ApiStackProps extends cdk.StackProps {
  */
 export class ApiStack extends cdk.Stack {
   public readonly apiEndpoint: string;
+  public readonly apiName: string = "research-summarizer-api";
+  public readonly handlerFns: lambda.IFunction[] = [];
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
@@ -161,6 +163,17 @@ export class ApiStack extends cdk.Stack {
     summaryById.addMethod("GET", new apigw.LambdaIntegration(getSummaryFn), authProps);
 
     this.apiEndpoint = api.url;
+    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn);
+    // Active X-Ray tracing + IAM permission so the Lambda runtime can
+    // actually write trace segments.
+    this.handlerFns.forEach((fn) => {
+      const concrete = fn as lambda.Function;
+      const cfn = concrete.node.defaultChild as lambda.CfnFunction | undefined;
+      if (cfn) cfn.tracingConfig = { mode: "Active" };
+      concrete.role?.addManagedPolicy(
+        cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName("AWSXRayDaemonWriteAccess"),
+      );
+    });
     new cdk.CfnOutput(this, "ApiEndpoint", { value: api.url });
   }
 }

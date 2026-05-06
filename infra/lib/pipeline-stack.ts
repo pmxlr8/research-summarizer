@@ -39,6 +39,7 @@ export class PipelineStack extends cdk.Stack {
   public readonly jobsQueue: sqs.Queue;
   public readonly deadLetterQueue: sqs.Queue;
   public readonly stateMachine: sfn.StateMachine;
+  public readonly pipelineFns: lambda.IFunction[] = [];
 
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
@@ -222,6 +223,7 @@ export class PipelineStack extends cdk.Stack {
     this.stateMachine = new sfn.StateMachine(this, "SummarizationStateMachine", {
       definitionBody: sfn.DefinitionBody.fromChainable(definition),
       timeout: cdk.Duration.minutes(10),
+      tracingEnabled: true,
       logs: {
         destination: new logs.LogGroup(this, "StateMachineLogs", {
           retention: logs.RetentionDays.ONE_WEEK,
@@ -256,6 +258,16 @@ export class PipelineStack extends cdk.Stack {
     );
 
     // ─── Outputs ───────────────────────────────────────────────────
+
+    this.pipelineFns.push(fetchPdfFn, extractTextFn, chunkFn, mapSummarizeFn, reduceSummaryFn, triggerFn);
+    this.pipelineFns.forEach((fn) => {
+      const concrete = fn as lambda.Function;
+      const cfn = concrete.node.defaultChild as lambda.CfnFunction | undefined;
+      if (cfn) cfn.tracingConfig = { mode: "Active" };
+      concrete.role?.addManagedPolicy(
+        cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName("AWSXRayDaemonWriteAccess"),
+      );
+    });
 
     new cdk.CfnOutput(this, "JobsQueueUrl", { value: this.jobsQueue.queueUrl });
     new cdk.CfnOutput(this, "DLQUrl", { value: this.deadLetterQueue.queueUrl });
