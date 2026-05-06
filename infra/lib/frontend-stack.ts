@@ -38,16 +38,27 @@ export class FrontendStack extends cdk.Stack {
     // Rewrite /foo/ → /foo/index.html (S3 doesn't act like a webserver and
     // resolve directory indexes for sub-paths). Without this, every nested
     // route returns the landing page via the 403 → /index.html fallback.
+    //
+    // Special case: /app/summary/<dynamic-id>/ → /app/summary/_view/index.html
+    // because static export only ships the "_view" placeholder; the React
+    // page reads the real id from window.location at runtime.
     const rewriter = new cloudfront.Function(this, "PathRewriter", {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
       code: cloudfront.FunctionCode.fromInline(`
         function handler(event) {
           var req = event.request;
           var uri = req.uri;
+
+          // Dynamic summary route: any /app/summary/<id>/ → placeholder file.
+          var summaryMatch = uri.match(/^\\/app\\/summary\\/([^/]+)\\/?$/);
+          if (summaryMatch) {
+            req.uri = '/app/summary/_view/index.html';
+            return req;
+          }
+
           if (uri.endsWith('/')) {
             req.uri = uri + 'index.html';
           } else if (!uri.includes('.')) {
-            // bare path like /signup → /signup/index.html
             req.uri = uri + '/index.html';
           }
           return req;

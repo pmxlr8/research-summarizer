@@ -9,7 +9,13 @@ export default function SummaryView({ id }: { id: string }) {
   const [summary, setSummary] = useState<Summary | null | undefined>(undefined);
 
   useEffect(() => {
-    getSummary(id).then(setSummary);
+    // Static export pre-renders this page with a placeholder id ("_view").
+    // CloudFront rewrites every /app/summary/<id>/ request to that file,
+    // so we read the *actual* id from the browser URL at runtime.
+    const segments = window.location.pathname.split("/").filter(Boolean);
+    const realId = segments[segments.length - 1];
+    const effectiveId = realId && realId !== "_view" ? realId : id;
+    getSummary(effectiveId).then(setSummary);
   }, [id]);
 
   if (summary === undefined) {
