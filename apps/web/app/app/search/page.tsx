@@ -2,13 +2,15 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { searchPapers, submitSummary } from "@/lib/api";
+import { searchPapers, submitSummary, ApiError } from "@/lib/api";
 import type { Paper } from "@/lib/types";
+import { useToast } from "@/app/components/Toaster";
 
 function SearchInner() {
   const router = useRouter();
   const params = useSearchParams();
   const initialQuery = params.get("q") ?? "";
+  const toast = useToast();
 
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<Paper[] | null>(null);
@@ -34,12 +36,19 @@ function SearchInner() {
   async function handleSummarize(paper: Paper) {
     setSubmitting(paper.id);
     try {
-      await submitSummary(paper);
-      // Send the user to the dashboard where they'll see it as Pending →
-      // Running → Done via the polling logic.
+      const result = await submitSummary(paper);
+      if (result.deduped) {
+        toast.success("Already summarized — opening the cached result.");
+      } else {
+        toast.info(`Job submitted${result.quotaRemaining !== undefined ? ` — ${result.quotaRemaining} summaries left this period.` : "."}`);
+      }
       router.push("/app");
     } catch (err) {
-      alert(`Failed to submit: ${(err as Error).message}`);
+      if (err instanceof ApiError && err.status === 429) {
+        toast.warning("You're out of summary quota for now.");
+      } else {
+        toast.error(`Could not submit: ${(err as Error).message}`);
+      }
       setSubmitting(null);
     }
   }

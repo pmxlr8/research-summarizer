@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { listSummaries } from "@/lib/api";
+import { listSummaries, getQuota } from "@/lib/api";
 import type { Summary } from "@/lib/types";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [summaries, setSummaries] = useState<Summary[] | null>(null);
   const [query, setQuery] = useState("");
+  const [quota, setQuota] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -17,16 +18,13 @@ export default function DashboardPage() {
 
     async function refresh() {
       try {
-        const next = await listSummaries();
+        const [next, q] = await Promise.all([listSummaries(), getQuota()]);
         if (cancelled) return;
         setSummaries(next);
-        // If anything is still in flight, poll again in 5s.
+        setQuota(q.quotaRemaining);
         const inFlight = next.some((s) => s.status === "pending" || s.status === "running");
-        if (inFlight) {
-          timer = setTimeout(refresh, 5000);
-        }
+        if (inFlight) timer = setTimeout(refresh, 5000);
       } catch {
-        // Best-effort; surface no error UI on a poll miss.
         if (!cancelled) timer = setTimeout(refresh, 10_000);
       }
     }
@@ -75,7 +73,11 @@ export default function DashboardPage() {
       <dl className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Stat label="Summaries generated" value={doneCount} />
         <Stat label="In progress" value={runningCount} />
-        <Stat label="Quota remaining" value="∞" hint="unlimited during dev" />
+        <Stat
+          label="Quota remaining"
+          value={quota === null ? "—" : quota}
+          hint={quota === 0 ? "limit reached" : "out of 10 per period"}
+        />
       </dl>
 
       {/* Recent summaries */}

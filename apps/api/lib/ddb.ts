@@ -97,6 +97,142 @@ export async function getJob(
   return res.Item ? itemToJob(res.Item as JobItem) : null;
 }
 
+/**
+ * Search the GSI1 (PAPER#{paperId}) index for any DONE summary of this
+ * paper across all users. Used by submit-job for content-level dedup —
+ * if anyone has already paid for the Bedrock tokens, we copy the result.
+ */
+export async function findCompletedSummaryForPaper(
+  paperId: string,
+): Promise<SummaryJob | null> {
+  const res = await ddb.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      IndexName: "GSI1",
+      KeyConditionExpression: "GSI1PK = :pk",
+      ExpressionAttributeValues: {
+        ":pk": paperGsiPk(paperId),
+        ":done": "done",
+      },
+      FilterExpression: "#s = :done",
+      ExpressionAttributeNames: { "#s": "status" },
+      Limit: 1,
+    }),
+  );
+  const item = res.Items?.[0];
+  return item ? itemToJob(item as JobItem) : null;
+}
+
+/**
+ * Create a job record that's already complete by cloning the sections
+ * and keywords from a previous summary. Used when dedup finds an existing
+ * result — gives the user instant gratification with no Bedrock cost.
+ */
+export async function createDedupedJob(args: {
+  jobId: string;
+  userId: string;
+  paper: Paper;
+  source: SummaryJob;
+}): Promise<void> {
+  const now = new Date().toISOString();
+  const item: JobItem = {
+    PK: userPk(args.userId),
+    SK: jobSk(args.jobId),
+    GSI1PK: paperGsiPk(args.paper.id),
+    GSI1SK: `JOB#${args.jobId}`,
+    jobId: args.jobId,
+    userId: args.userId,
+    paperId: args.paper.id,
+    paper: args.paper,
+    status: "done",
+    createdAt: now,
+    completedAt: now,
+    durationSeconds: 0, // signals "instant" for the UI
+    sections: args.source.sections,
+    keywords: args.source.keywords,
+  };
+  await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+}
+
+// ─── Quota ──────────────────────────────────────────────────────────
+//
+// Stored as the `quota` attribute on a PROFILE# row. Default 10 per user.
+// decrementQuota() is conditional — fails when quota is already 0.
+
+const QUOTA_DEFAULT = 10;
+const profileSk = "PROFILE#";
+
+export async function getUserQuota(userId: string): Promise<number> {
+  const res = await ddb.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: userPk(userId), SK: profileSk },
+      ProjectionExpression: "quota",
+    }),
+  );
+  if (res.Item?.quota !== undefined) return res.Item.quota as number;
+  return QUOTA_DEFAULT;
+}
+
+export class QuotaExceededError extends Error {
+  constructor() {
+    super("quota_exceeded");
+    this.name = "QuotaExceededError";
+  }
+}
+
+/**
+ * Atomically decrement the user's quota. If the PROFILE row doesn't yet
+ * exist, create it at QUOTA_DEFAULT-1. If quota is already 0, throws
+ * QuotaExceededError without decrementing.
+ */
+export async function decrementQuota(userId: string): Promise<number> {
+  // First-time path: create profile if missing.
+  try {
+    await ddb.send(new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        PK: userPk(userId),
+        SK: profileSk,
+        userId,
+        quota: QUOTA_DEFAULT,
+        createdAt: new Date().toISOString(),
+      },
+      ConditionExpression: "attribute_not_exists(PK)",
+    }));
+  } catch (err) {
+    // ConditionalCheckFailedException means the row already exists; that's expected.
+    if ((err as { name?: string }).name !== "ConditionalCheckFailedException") throw err;
+  }
+
+  try {
+    const res = await ddb.send(new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: userPk(userId), SK: profileSk },
+      UpdateExpression: "SET quota = quota - :one",
+      ConditionExpression: "quota > :zero",
+      ExpressionAttributeValues: { ":one": 1, ":zero": 0 },
+      ReturnValues: "UPDATED_NEW",
+    }));
+    return (res.Attributes?.quota as number) ?? 0;
+  } catch (err) {
+    if ((err as { name?: string }).name === "ConditionalCheckFailedException") {
+      throw new QuotaExceededError();
+    }
+    throw err;
+  }
+}
+
+/** Refund quota when we did not consume Bedrock (dedup hit). */
+export async function refundQuota(userId: string): Promise<void> {
+  await ddb.send(new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: { PK: userPk(userId), SK: profileSk },
+    UpdateExpression: "SET quota = quota + :one",
+    ExpressionAttributeValues: { ":one": 1 },
+  }));
+}
+
 export async function listJobsForUser(userId: string): Promise<SummaryJob[]> {
   const res = await ddb.send(
     new QueryCommand({

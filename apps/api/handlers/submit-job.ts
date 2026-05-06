@@ -2,7 +2,14 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { v4 as uuidv4 } from "uuid";
 import { ok, clientError, serverError, log } from "../lib/http";
-import { createJob } from "../lib/ddb";
+import {
+  createJob,
+  createDedupedJob,
+  findCompletedSummaryForPaper,
+  decrementQuota,
+  refundQuota,
+  QuotaExceededError,
+} from "../lib/ddb";
 import type { Paper, PipelinePayload } from "../lib/types";
 
 const REGION = process.env.AWS_REGION ?? "us-east-1";
@@ -33,7 +40,30 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
   const jobId = uuidv4();
   const startedAt = new Date().toISOString();
 
+  // Reserve quota first. If they're out, we 429 without writing anything.
+  let quotaRemaining: number;
   try {
+    quotaRemaining = await decrementQuota(userId);
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      return clientError(429, "quota_exceeded", "You've used your free summary quota. Reach out for more.");
+    }
+    log("submit_job_quota_error", { requestId, message: (err as Error).message });
+    return serverError(500, "internal_error", "quota check failed");
+  }
+
+  try {
+    // Dedup: if any user has previously summarized this paper to "done",
+    // copy that result for the requesting user instead of re-running the
+    // pipeline. Saves Bedrock tokens AND refunds the quota we reserved.
+    const existing = await findCompletedSummaryForPaper(paper.id);
+    if (existing && existing.sections && existing.sections.length > 0) {
+      await createDedupedJob({ jobId, userId, paper, source: existing });
+      await refundQuota(userId).catch(() => {});  // best-effort refund
+      log("submit_job_deduped", { requestId, jobId, paperId: paper.id, userId });
+      return ok({ jobId, deduped: true, quotaRemaining: quotaRemaining + 1 }, { "Cache-Control": "no-store" });
+    }
+
     await createJob({ jobId, userId, paper });
 
     const payload: PipelinePayload = { jobId, userId, paper, startedAt };
@@ -42,9 +72,11 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       MessageBody: JSON.stringify(payload),
     }));
 
-    log("submit_job", { requestId, jobId, paperId: paper.id, userId });
-    return ok({ jobId }, { "Cache-Control": "no-store" });
+    log("submit_job", { requestId, jobId, paperId: paper.id, userId, quotaRemaining });
+    return ok({ jobId, deduped: false, quotaRemaining }, { "Cache-Control": "no-store" });
   } catch (err) {
+    // Roll back the quota we reserved on any failure after this point.
+    await refundQuota(userId).catch(() => {});
     log("submit_job_failed", { requestId, message: (err as Error).message });
     return serverError(500, "internal_error", "could not submit job");
   }

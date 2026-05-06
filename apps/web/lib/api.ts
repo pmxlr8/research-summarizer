@@ -24,6 +24,13 @@ function delay<T>(value: T, ms = MOCK_DELAY): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 
+export class ApiError extends Error {
+  constructor(public status: number, public code: string, message: string) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
@@ -36,7 +43,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    let parsed: { error?: string; message?: string } = {};
+    try { parsed = JSON.parse(text); } catch {}
+    throw new ApiError(res.status, parsed.error ?? "api_error", parsed.message ?? text ?? res.statusText);
   }
   return res.json();
 }
@@ -88,19 +97,20 @@ export async function getSummary(id: string): Promise<Summary | null> {
   return delay(mockSummaries.find((s) => s.id === id) ?? null);
 }
 
-export async function submitSummary(
-  paper: Paper,
-): Promise<{ jobId: string }> {
+export type SubmitResult = {
+  jobId: string;
+  deduped?: boolean;
+  quotaRemaining?: number;
+};
+
+export async function submitSummary(paper: Paper): Promise<SubmitResult> {
   if (USE_REAL) {
-    // Real backend needs the full paper object (pdfUrl, title, etc.) to
-    // start the pipeline. Don't catch errors — let the UI handle them so
-    // we don't silently fall back to a fake job id.
-    return apiFetch<{ jobId: string }>("summarize", {
+    return apiFetch<SubmitResult>("summarize", {
       method: "POST",
       body: JSON.stringify({ paper }),
     });
   }
-  return delay({ jobId: `mock-${Date.now()}-${paper.id}` });
+  return delay({ jobId: `mock-${Date.now()}-${paper.id}`, deduped: false, quotaRemaining: 10 });
 }
 
 // ─── Health check (Phase 1 verification) ────────────────────────────
@@ -111,6 +121,19 @@ export async function healthCheck(): Promise<{
 }> {
   if (USE_REAL) return apiFetch("health");
   return delay({ status: "ok (mock)", userId: "mock-user-id" });
+}
+
+// ─── Quota ──────────────────────────────────────────────────────────
+
+export async function getQuota(): Promise<{ quotaRemaining: number }> {
+  if (USE_REAL) {
+    try {
+      return await apiFetch<{ quotaRemaining: number }>("quota");
+    } catch {
+      return { quotaRemaining: 10 };
+    }
+  }
+  return delay({ quotaRemaining: 10 });
 }
 
 // ─── Expose mode for debugging ──────────────────────────────────────

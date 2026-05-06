@@ -153,6 +153,14 @@ export class ApiStack extends cdk.Stack {
     });
     props.table.grantReadData(listSummariesFn);
 
+    const getQuotaFn = new nodejs.NodejsFunction(this, "GetQuotaFn", {
+      ...handlerProps,
+      entry: path.join(apiRoot, "handlers", "get-quota.ts"),
+      timeout: cdk.Duration.seconds(5),
+      memorySize: 256,
+    });
+    props.table.grantReadData(getQuotaFn);
+
     const summarize = api.root.addResource("summarize");
     summarize.addMethod("POST", new apigw.LambdaIntegration(submitJobFn), authProps);
 
@@ -162,8 +170,10 @@ export class ApiStack extends cdk.Stack {
     const summaryById = summaries.addResource("{id}");
     summaryById.addMethod("GET", new apigw.LambdaIntegration(getSummaryFn), authProps);
 
+    api.root.addResource("quota").addMethod("GET", new apigw.LambdaIntegration(getQuotaFn), authProps);
+
     this.apiEndpoint = api.url;
-    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn);
+    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn, getQuotaFn);
     // Active X-Ray tracing + IAM permission so the Lambda runtime can
     // actually write trace segments.
     this.handlerFns.forEach((fn) => {
