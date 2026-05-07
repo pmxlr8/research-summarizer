@@ -13,25 +13,25 @@ type Turn = {
   error?: string;
 };
 
-const SUGGESTED = [
-  "What problem does this paper solve?",
-  "What are the main results?",
-  "What are the limitations?",
-  "How does the methodology work?",
+const STARTERS = [
+  "What problem is this paper solving?",
+  "Summarize the methodology in plain language",
+  "What are the limitations the authors acknowledge?",
 ];
 
 export function ChatPanel({ jobId }: { jobId: string }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [openCitations, setOpenCitations] = useState<Record<number, boolean>>({});
-  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const lastTurnRef = useRef<HTMLLIElement | null>(null);
   const toast = useToast();
 
-  // Auto-scroll to the newest turn.
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [turns]);
+    if (lastTurnRef.current) {
+      lastTurnRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [turns.length]);
 
   async function ask(q: string) {
     if (busy) return;
@@ -50,14 +50,16 @@ export function ChatPanel({ jobId }: { jobId: string }) {
       );
     } catch (err) {
       const msg = err instanceof ApiError && err.status === 409
-        ? "The paper is still being summarized. Try again in a moment."
+        ? "The summary isn't ready yet — try again in a moment."
         : (err as Error).message;
       setTurns((prev) =>
         prev.map((t) => (t.id === id ? { ...t, pending: false, error: msg } : t)),
       );
-      toast.error(`Chat failed: ${msg}`);
+      toast.error(msg);
     } finally {
       setBusy(false);
+      // Refocus the input so the user can chain questions.
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   }
 
@@ -66,113 +68,126 @@ export function ChatPanel({ jobId }: { jobId: string }) {
     ask(input);
   }
 
-  function toggleCitations(turnId: number) {
-    setOpenCitations((prev) => ({ ...prev, [turnId]: !prev[turnId] }));
-  }
-
   return (
-    <section className="mt-12 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-      <header className="flex items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-slate-800">
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-2 rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500" />
-          <h2 className="text-base font-semibold">Talk to this paper</h2>
-        </div>
-        <span className="text-xs text-slate-500 dark:text-slate-400">RAG via Bedrock</span>
-      </header>
+    <section className="mt-16 border-t border-slate-200 pt-10 dark:border-slate-800">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+          Questions
+        </h2>
+        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+          grounded in the paper
+        </span>
+      </div>
 
-      <div ref={scrollRef} className="max-h-[420px] space-y-4 overflow-y-auto px-5 py-4">
-        {turns.length === 0 ? (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Ask any question about this paper. The model will only answer using the paper&apos;s content, with citations.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {SUGGESTED.map((s) => (
+      {turns.length === 0 ? (
+        <div className="mt-6">
+          <p className="max-w-2xl text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
+            Ask anything about the paper&apos;s content. Each answer is restricted to the
+            paper&apos;s own text and cites the specific chunks it draws from.
+          </p>
+          <ul className="mt-5 space-y-1.5">
+            {STARTERS.map((s) => (
+              <li key={s}>
                 <button
-                  key={s}
                   type="button"
                   onClick={() => ask(s)}
                   disabled={busy}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700 hover:border-slate-300 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+                  className="group flex w-full items-baseline gap-3 rounded-md px-2 py-1.5 text-left text-[14px] text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-900"
                 >
-                  {s}
+                  <span className="text-slate-400 transition group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-200">→</span>
+                  <span className="flex-1">{s}</span>
                 </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          turns.map((t) => (
-            <article key={t.id} className="space-y-2">
-              <div className="flex justify-end">
-                <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-slate-900 px-3.5 py-2 text-sm text-white dark:bg-white dark:text-slate-900">
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <ol className="mt-8 space-y-10">
+          {turns.map((t, i) => (
+            <li
+              key={t.id}
+              ref={i === turns.length - 1 ? lastTurnRef : null}
+              className="relative pl-6"
+            >
+              <span
+                aria-hidden
+                className="absolute left-0 top-1.5 inline-block h-full w-px bg-gradient-to-b from-orange-500/60 via-pink-500/40 to-violet-500/0"
+              />
+
+              <div className="flex items-baseline gap-3">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Q{String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="text-[15px] font-semibold text-slate-900 dark:text-slate-50">
                   {t.question}
-                </p>
+                </h3>
               </div>
-              <div className="flex">
-                <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-slate-100 px-3.5 py-2 text-sm text-slate-900 dark:bg-slate-800 dark:text-slate-100">
-                  {t.pending ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-500" />
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-500 [animation-delay:120ms]" />
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-500 [animation-delay:240ms]" />
+
+              <div className="mt-3 text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
+                {t.pending ? (
+                  <span className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <span className="relative inline-block h-2 w-2">
+                      <span className="absolute inset-0 animate-ping rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500 opacity-60" />
+                      <span className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500" />
                     </span>
-                  ) : t.error ? (
-                    <span className="text-red-600 dark:text-red-300">{t.error}</span>
-                  ) : (
-                    <>
-                      <p className="leading-relaxed whitespace-pre-wrap">{t.answer}</p>
-                      {t.citations && t.citations.length > 0 ? (
-                        <div className="mt-2">
-                          <button
-                            type="button"
-                            onClick={() => toggleCitations(t.id)}
-                            className="text-[11px] font-medium text-slate-500 underline-offset-2 hover:underline dark:text-slate-400"
-                          >
-                            {openCitations[t.id] ? "Hide" : "Show"} {t.citations.length} source{t.citations.length === 1 ? "" : "s"}
-                          </button>
-                          {openCitations[t.id] ? (
-                            <ul className="mt-2 space-y-2 border-t border-slate-200 pt-2 dark:border-slate-700">
-                              {t.citations.map((c) => (
-                                <li key={c.index} className="text-[12px] leading-relaxed text-slate-600 dark:text-slate-400">
-                                  <span className="mr-1 inline-flex items-center justify-center rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                                    [{c.index}]
-                                  </span>
-                                  <span className="text-[11px] text-slate-400">chunk {c.chunkIndex + 1} · sim {c.score}</span>
-                                  <p className="mt-1 italic">{c.snippet}</p>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </>
-                  )}
-                </div>
+                    <span className="italic">reading the paper</span>
+                  </span>
+                ) : t.error ? (
+                  <span className="text-red-600 dark:text-red-400">{t.error}</span>
+                ) : (
+                  <p className="whitespace-pre-wrap">{t.answer}</p>
+                )}
               </div>
-            </article>
-          ))
-        )}
-      </div>
+
+              {t.citations && t.citations.length > 0 ? (
+                <details className="group mt-4">
+                  <summary className="cursor-pointer list-none text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400 transition hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200">
+                    <span className="mr-1.5 inline-block transition group-open:rotate-90">›</span>
+                    {t.citations.length} source{t.citations.length === 1 ? "" : "s"}
+                  </summary>
+                  <ol className="mt-3 space-y-3 border-l border-slate-200 pl-4 dark:border-slate-800">
+                    {t.citations.map((c) => (
+                      <li key={c.index} className="text-[13px] leading-relaxed">
+                        <div className="flex items-baseline gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                          <span className="font-semibold">[{c.index}]</span>
+                          <span>chunk {c.chunkIndex + 1}</span>
+                          <span className="text-slate-400 dark:text-slate-600">·</span>
+                          <span>cosine {c.score.toFixed(2)}</span>
+                        </div>
+                        <p className="mt-1 text-slate-600 dark:text-slate-400">{c.snippet}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+      )}
 
       <form
         onSubmit={handleSubmit}
-        className="flex gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-800"
+        className="mt-10 flex items-center gap-3 border-t border-slate-200 pt-5 dark:border-slate-800"
       >
+        <span className="select-none font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          ask
+        </span>
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask anything about this paper…"
+          placeholder={turns.length === 0 ? "What does this paper actually contribute?" : "follow-up question"}
           disabled={busy}
           maxLength={1000}
-          className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+          className="flex-1 border-0 bg-transparent py-1.5 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 disabled:opacity-60 dark:text-slate-100 dark:placeholder:text-slate-600"
         />
         <button
           type="submit"
           disabled={busy || input.trim().length < 3}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          className="text-[12px] font-semibold uppercase tracking-wider text-slate-900 transition hover:text-orange-600 disabled:opacity-30 dark:text-slate-100 dark:hover:text-orange-400"
         >
-          {busy ? "…" : "Ask"}
+          {busy ? "…" : "send →"}
         </button>
       </form>
     </section>
