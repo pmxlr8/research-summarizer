@@ -123,7 +123,7 @@ export default function SummaryView({ id }: { id: string }) {
             <ul className="mt-3 space-y-2">
               {sec.bullets.map((b, i) => (
                 <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-br from-cyan-400 via-indigo-500 to-violet-500" />
                   <span>{b}</span>
                 </li>
               ))}

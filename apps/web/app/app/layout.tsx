@@ -40,15 +40,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white px-4 py-6 dark:border-slate-800 dark:bg-slate-900 md:block">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+      {/* Sidebar — fixed full-height column with the user block pinned to the bottom */}
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-200 bg-white/70 px-4 py-6 backdrop-blur dark:border-slate-800 dark:bg-slate-900/60 md:flex">
         <Link href="/" className="flex items-center gap-2 px-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500" />
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-400 via-indigo-500 to-violet-500" />
           <span className="text-sm font-semibold">Summarizer</span>
         </Link>
 
-        <nav className="mt-8 space-y-1">
+        <nav className="mt-8 flex-1 space-y-1">
           {navItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -69,37 +69,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-auto"></div>
-
-        <div className="absolute bottom-4 w-52">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500 text-xs font-bold text-white">
-                {(session?.user.name ?? session?.user.email ?? "?").slice(0, 1).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium">{session?.user.name ?? session?.user.email}</p>
-                <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {session?.user.email}
-                </p>
-              </div>
+        {/* User block — bottom of the column, never scrolls */}
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 via-indigo-500 to-violet-500 text-xs font-bold text-white">
+              {(session?.user.name ?? session?.user.email ?? "?").slice(0, 1).toUpperCase()}
             </div>
-            <button
-              onClick={handleSignOut}
-              className="mt-2 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              Sign out
-            </button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium">{session?.user.name ?? session?.user.email}</p>
+              <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                {session?.user.email}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={handleSignOut}
+            className="mt-2 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main content — independently scrollable */}
       <main className="flex-1 overflow-y-auto">
         {/* Mobile top bar */}
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden dark:border-slate-800 dark:bg-slate-900">
           <Link href="/app" className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500" />
+            <div className="h-6 w-6 rounded-md bg-gradient-to-br from-cyan-400 via-indigo-500 to-violet-500" />
             <span className="text-sm font-semibold">Summarizer</span>
           </Link>
           <button

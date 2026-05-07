@@ -111,7 +111,7 @@ export function ChatPanel({ jobId }: { jobId: string }) {
             >
               <span
                 aria-hidden
-                className="absolute left-0 top-1.5 inline-block h-full w-px bg-gradient-to-b from-orange-500/60 via-pink-500/40 to-violet-500/0"
+                className="absolute left-0 top-1.5 inline-block h-full w-px bg-gradient-to-b from-cyan-400/70 via-indigo-500/40 to-violet-500/0"
               />
 
               <div className="flex items-baseline gap-3">
@@ -127,8 +127,8 @@ export function ChatPanel({ jobId }: { jobId: string }) {
                 {t.pending ? (
                   <span className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400">
                     <span className="relative inline-block h-2 w-2">
-                      <span className="absolute inset-0 animate-ping rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500 opacity-60" />
-                      <span className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500" />
+                      <span className="absolute inset-0 animate-ping rounded-full bg-gradient-to-br from-cyan-400 via-indigo-500 to-violet-500 opacity-60" />
+                      <span className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400 via-indigo-500 to-violet-500" />
                     </span>
                     <span className="italic">reading the paper</span>
                   </span>
@@ -185,7 +185,7 @@ export function ChatPanel({ jobId }: { jobId: string }) {
         <button
           type="submit"
           disabled={busy || input.trim().length < 3}
-          className="text-[12px] font-semibold uppercase tracking-wider text-slate-900 transition hover:text-orange-600 disabled:opacity-30 dark:text-slate-100 dark:hover:text-orange-400"
+          className="text-[12px] font-semibold uppercase tracking-wider text-slate-900 transition hover:text-cyan-600 disabled:opacity-30 dark:text-slate-100 dark:hover:text-cyan-400"
         >
           {busy ? "…" : "send →"}
         </button>

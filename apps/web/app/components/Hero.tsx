@@ -2,9 +2,9 @@ import Link from "next/link";
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden border-b border-slate-200 dark:border-slate-800">
+    <section className="relative isolate overflow-hidden border-b border-slate-200 grain dark:border-slate-800">
       <div className="absolute inset-0 -z-10 bg-grid" />
-      <div className="absolute inset-0 -z-10 aurora opacity-70" />
+      <div className="absolute inset-0 -z-10 mesh-bg" />
 
       <div className="mx-auto max-w-6xl px-6 pb-24 pt-20 sm:pb-32 sm:pt-28 lg:px-8">
         <div className="flex items-center gap-2">

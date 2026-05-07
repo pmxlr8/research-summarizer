@@ -3,39 +3,131 @@
 @tailwind utilities;
 
 :root {
-  --grid: rgba(15, 23, 42, 0.06);
+  --grid: rgba(15, 23, 42, 0.05);
+  --accent-1: #22d3ee; /* cyan-400 */
+  --accent-2: #6366f1; /* indigo-500 */
+  --accent-3: #8b5cf6; /* violet-500 */
 }
 .dark {
-  --grid: rgba(255, 255, 255, 0.06);
+  --grid: rgba(255, 255, 255, 0.05);
 }
 
-/* Subtle grid backdrop for the hero */
+/* Subtle grid backdrop with vignette mask */
 .bg-grid {
   background-image:
     linear-gradient(to right, var(--grid) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: 48px 48px;
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 0%, transparent 100%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 0%, transparent 100%);
 }
 
-/* Gradient text utility used on headings */
+/* Cool gradient text — replaces the old orange/pink/violet */
 .gradient-text {
-  background-image: linear-gradient(135deg, #ff9900 0%, #e7157b 50%, #8c4fff 100%);
+  background-image: linear-gradient(120deg, var(--accent-1) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-/* Aurora blur behind the hero */
-.aurora {
-  background:
-    radial-gradient(600px circle at 20% 20%, rgba(255, 153, 0, 0.25), transparent 40%),
-    radial-gradient(500px circle at 80% 30%, rgba(231, 21, 123, 0.2), transparent 40%),
-    radial-gradient(500px circle at 50% 80%, rgba(140, 79, 255, 0.22), transparent 40%);
-  filter: blur(30px);
+/* Animated mesh-gradient backdrop. Drifts slowly to feel alive without
+   distracting. Used behind the hero and the auth pages. */
+.mesh-bg {
+  background-color: transparent;
+  background-image:
+    radial-gradient(ellipse 700px 500px at 12% 10%, rgba(34, 211, 238, 0.22), transparent 60%),
+    radial-gradient(ellipse 600px 500px at 88% 30%, rgba(99, 102, 241, 0.20), transparent 60%),
+    radial-gradient(ellipse 600px 500px at 50% 95%, rgba(139, 92, 246, 0.22), transparent 60%);
+  background-repeat: no-repeat;
+  animation: meshDrift 22s ease-in-out infinite alternate;
+}
+@keyframes meshDrift {
+  0%   { background-position: 0% 0%, 100% 30%, 50% 100%; }
+  50%  { background-position: 18% 22%, 75% 8%, 32% 90%; }
+  100% { background-position: 0% 0%, 100% 30%, 50% 100%; }
+}
+
+/* Old aurora alias — keeps existing class refs working until callsites move. */
+.aurora { @apply mesh-bg; }
+
+/* Conic ring used as a subtle border-glow on hover */
+.conic-ring {
+  position: relative;
+  isolation: isolate;
+}
+.conic-ring::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    transparent 0deg,
+    var(--accent-1) 60deg,
+    var(--accent-2) 180deg,
+    var(--accent-3) 300deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  animation: spinAngle 6s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+.conic-ring:hover::before {
+  opacity: 0.7;
+}
+@keyframes spinAngle {
+  to { --angle: 360deg; }
+}
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Film-grain overlay — extremely subtle, useful in dark mode */
+.grain { position: relative; }
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Card lift: subtle hover */
+.card-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.card-lift:hover {
+  transform: translateY(-1px);
+}
+
+/* Shimmer skeleton placeholder */
+.shimmer {
+  background-image: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.08) 0%,
+    rgba(148, 163, 184, 0.18) 50%,
+    rgba(148, 163, 184, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerSlide 1.6s infinite linear;
+}
+@keyframes shimmerSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  .text-balance { text-wrap: balance; }
 }

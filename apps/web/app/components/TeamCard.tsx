@@ -9,7 +9,7 @@ export function TeamCard({ name, area }: Props) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-violet-500 text-base font-bold text-white">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 via-indigo-500 to-violet-500 text-base font-bold text-white">
         {initials}
       </div>
       <h3 className="mt-4 text-base font-semibold">{name}</h3>

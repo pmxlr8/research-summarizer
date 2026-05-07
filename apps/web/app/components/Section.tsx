@@ -11,7 +11,7 @@ type Props = {
 export function Section({ id, eyebrow, title, intro, children }: Props) {
   return (
     <section id={id} className="mx-auto max-w-6xl scroll-mt-16 px-6 py-20 lg:px-8">
-      <p className="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+      <p className="text-xs font-semibold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
         {eyebrow}
       </p>
       <h2 className="mt-3 max-w-3xl text-3xl font-bold tracking-tight sm:text-4xl">

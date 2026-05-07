@@ -59,7 +59,7 @@ export default function DashboardPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search papers by title, author, or topic…"
-          className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         />
         <button
           type="submit"
@@ -149,7 +149,7 @@ function SummaryCard({ s }: { s: Summary }) {
       </p>
       {s.status === "running" ? (
         <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-          <div className="h-full w-1/3 animate-pulse rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-violet-500" />
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-violet-500" />
         </div>
       ) : s.durationSeconds ? (
         <p className="mt-3 text-xs text-slate-500 dark:text-slate-500">
