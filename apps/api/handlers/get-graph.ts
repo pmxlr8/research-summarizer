@@ -24,7 +24,9 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return clientError(409, "job_not_ready", `summary is still ${job.status}`);
     }
 
-    if (job.graph && job.graph.nodes && job.graph.nodes.length > 0) {
+    const force = event.queryStringParameters?.force === "1";
+
+    if (!force && job.graph && job.graph.nodes && job.graph.nodes.length > 0) {
       log("graph_cached", { requestId, jobId: id, nodes: job.graph.nodes.length });
       return ok({ graph: job.graph, generated: false });
     }

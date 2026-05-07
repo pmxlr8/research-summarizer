@@ -159,9 +159,13 @@ export async function getRelated(jobId: string): Promise<RelatedPaper[]> {
 
 // ─── Knowledge graph ────────────────────────────────────────────────
 
-export async function getGraph(jobId: string): Promise<{ graph: KnowledgeGraph; generated: boolean }> {
+export async function getGraph(
+  jobId: string,
+  options: { force?: boolean } = {},
+): Promise<{ graph: KnowledgeGraph; generated: boolean }> {
   if (USE_REAL) {
-    return apiFetch<{ graph: KnowledgeGraph; generated: boolean }>(`summaries/${jobId}/graph`);
+    const qs = options.force ? "?force=1" : "";
+    return apiFetch<{ graph: KnowledgeGraph; generated: boolean }>(`summaries/${jobId}/graph${qs}`);
   }
   return delay({ graph: { nodes: [], edges: [] }, generated: false });
 }

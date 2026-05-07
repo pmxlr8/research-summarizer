@@ -199,12 +199,12 @@ export async function chat(args: {
 
 import type { KnowledgeGraph } from "./types";
 
-const GRAPH_SYSTEM_PROMPT = `You are an expert at building knowledge graphs from academic papers. Given a structured paper summary, extract entities and relationships.
+const GRAPH_SYSTEM_PROMPT = `You are an expert at building knowledge graphs from academic papers. Given a structured paper summary, extract entities and relationships that *teach* a reader the paper's main ideas.
 
 Reply ONLY with valid JSON in this exact shape (no prose, no markdown fences):
 {
   "nodes": [
-    {"id": "snake_case_id", "label": "Display Label", "type": "method|dataset|metric|task|concept|result", "summary": "one concise sentence"}
+    {"id": "snake_case_id", "label": "Display Label", "type": "method|dataset|metric|task|concept|result", "summary": "one concrete sentence"}
   ],
   "edges": [
     {"source": "node_id_1", "target": "node_id_2", "label": "short verb phrase", "type": "uses|achieves|extends|evaluated_on|introduces|cites|compares_with"}
@@ -212,14 +212,20 @@ Reply ONLY with valid JSON in this exact shape (no prose, no markdown fences):
 }
 
 Hard rules:
-- 8 to 22 nodes. Pick the MOST important ones; do not pad with vague concepts.
+- 8 to 22 nodes. Pick the MOST important entities; skip generic filler ("deep learning", "neural network") unless they are central.
 - 8 to 35 edges. Every edge's source and target MUST be a node id from the nodes array.
 - Node ids in lowercase snake_case (e.g., "self_attention", "wmt_2014").
-- Node "type" picks one of: method (algorithms, architectures, models), dataset, metric (e.g., BLEU, F1), task (e.g., translation), concept (theoretical idea), result (specific finding/number).
-- Edge "type" picks one of: uses, achieves, extends, evaluated_on, introduces, cites, compares_with.
+- Node "type" — pick one:
+   • method   — an algorithm, model, architecture, or technique introduced or used
+   • dataset  — a benchmark, corpus, or training set
+   • metric   — an evaluation measure (BLEU, F1, accuracy, perplexity, etc.)
+   • task     — the problem being solved (machine translation, QA, image classification)
+   • concept  — a theoretical or design idea (attention, scaling laws, regularization)
+   • result   — a specific finding or quantitative outcome ("28.4 BLEU on EN-DE")
+- Edge "type" — pick one of: uses, achieves, extends, evaluated_on, introduces, cites, compares_with.
 - Edge "label" is a short verb phrase (max 4 words).
-- "summary" on each node is ONE sentence.
-- No duplicate node ids. No self-loops.`;
+- "summary" on each node MUST be ONE concrete sentence that explains *what role this entity plays in this paper specifically* — what it does, what it improves, why the authors care. Do NOT write a generic dictionary definition. A reader who just sees the node summaries should understand the paper's main story.
+- No duplicate node ids. No self-loops. Edges must be specific (e.g., "evaluated on" + "WMT 2014" + "BLEU", not just generic "uses").`;
 
 export async function extractKnowledgeGraph(args: {
   paperTitle: string;

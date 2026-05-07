@@ -16,13 +16,17 @@ type State =
 export default function GraphPageClient({ id }: { id: string }) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [effectiveId, setEffectiveId] = useState<string>(id);
 
   useEffect(() => {
     const segments = window.location.pathname.split("/").filter(Boolean);
-    // Path is /app/summary/<actual-id>/graph → take the second-to-last segment.
     const realId = segments[segments.length - 2];
-    const effectiveId = realId && realId !== "_view" ? realId : id;
+    const next = realId && realId !== "_view" ? realId : id;
+    setEffectiveId(next);
+  }, [id]);
 
+  useEffect(() => {
+    if (!effectiveId) return;
     let cancelled = false;
     (async () => {
       try {
@@ -33,7 +37,6 @@ export default function GraphPageClient({ id }: { id: string }) {
           setState({ kind: "missing" });
           return;
         }
-        // First call may be slow because the LLM needs to generate.
         setState((s) => (s.kind === "loading" ? { kind: "generating" } : s));
         const { graph, generated } = await getGraph(effectiveId);
         if (cancelled) return;
@@ -45,10 +48,21 @@ export default function GraphPageClient({ id }: { id: string }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [effectiveId]);
+
+  async function regenerate() {
+    setState({ kind: "generating" });
+    try {
+      const { graph, generated } = await getGraph(effectiveId, { force: true });
+      setState({ kind: "ready", graph, generated });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : (err as Error).message;
+      setState({ kind: "error", message });
+    }
+  }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-[110rem] px-4 py-6 lg:px-8">
       <nav className="text-sm text-slate-500 dark:text-slate-400">
         <Link href="/app" className="hover:text-slate-700 dark:hover:text-slate-200">Dashboard</Link>
         <span className="mx-2">/</span>
@@ -75,14 +89,26 @@ export default function GraphPageClient({ id }: { id: string }) {
             knowledge graph
           </p>
         </div>
-        {summary ? (
-          <Link
-            href={`/app/summary/${summary.id}`}
-            className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-cyan-500 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-cyan-400 dark:hover:text-cyan-300"
-          >
-            ← back to summary
-          </Link>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2">
+          {state.kind === "ready" ? (
+            <button
+              type="button"
+              onClick={regenerate}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-cyan-500 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-cyan-400 dark:hover:text-cyan-300"
+              title="Re-extract entities with a fresh LLM call"
+            >
+              ↻ Regenerate
+            </button>
+          ) : null}
+          {summary ? (
+            <Link
+              href={`/app/summary/${summary.id}`}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-cyan-500 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-cyan-400 dark:hover:text-cyan-300"
+            >
+              ← back to summary
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <div className="mt-6">
