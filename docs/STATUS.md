@@ -56,6 +56,9 @@ Frontend tech: Next.js 14 static export, TypeScript, Tailwind CSS, Geist font, d
 | POST | `/summarize` | Reserves quota → checks dedup cache → enqueues SQS or returns cached result |
 | GET | `/summaries` | List the calling user's jobs |
 | GET | `/summaries/{id}` | Get one job's full record (status + sections + keywords) |
+| GET | `/summaries/{id}/related` | Top-3 most-similar papers from the user's own library by paper-level cosine |
+| GET | `/summaries/{id}/graph` | Knowledge graph (nodes + edges) extracted from the structured summary; lazily generated, `?force=1` to regenerate |
+| POST | `/chat` | Retrieval-augmented Q&A on a paper. Embeds the question, ranks chunks, prompts the LLM, returns answer + citations |
 | GET | `/quota` | User's remaining summary quota |
 
 ## 3.3 AWS architecture (5 stacks deployed)
@@ -133,10 +136,20 @@ LLM: **Qwen 3 Next 80B via Amazon Bedrock**. Will swap to Claude Sonnet once Ant
 - [x] Refresh-persistent auth (Cognito session via getSignInUserSession)
 - [x] CloudFront path rewriter for nested + dynamic routes
 - [x] Email-verification flow (signup → confirm code → login)
+- [x] **Forgot-password flow** (request code → confirm + new password → login)
 - [x] Search-result phrase quoting + title-field boost (`"attention is all you need"` returns the actual paper top-2)
 - [x] Static-export friendly dynamic route with `_view` placeholder + URL-derived id
+- [x] Inline citation tooltips in chat answers (hover `[N]` markers for chunk excerpt)
+- [x] Export buttons on every summary — Copy Markdown, Download .md, Download .bib
+- [x] Recent searches as chips on dashboard + search page (localStorage)
 
-## 4.4 Cloud-class deliverables
+## 4.4 LLM-driven features (Phase 4+)
+
+- [x] **Talk-to-PDF (RAG chat)** — Titan Text Embeddings v2 vectors per chunk in DynamoDB; cosine retrieval; cited LLM answer with chunk index, similarity, and snippet tooltip per `[N]` marker
+- [x] **Related papers** — paper-level mean embeddings persisted on JOB records; top-3 cosine matches against the user's own library, with lazy backfill for older summaries
+- [x] **Knowledge graph** — entities and relationships extracted from the structured summary, rendered with React Flow + dagre LR layout; key-concepts rail with the four most-connected nodes; click-through neighbours; regenerate button forces a fresh extraction
+
+## 4.5 Cloud-class deliverables
 
 - [x] AWS CDK as Infrastructure-as-Code (5 stacks, fully reproducible)
 - [x] GitHub Actions CI (`cdk synth` + `npm build` on PRs)

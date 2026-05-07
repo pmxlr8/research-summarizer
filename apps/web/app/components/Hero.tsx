@@ -7,10 +7,13 @@ export function Hero() {
       <div className="absolute inset-0 -z-10 mesh-bg" />
 
       <div className="mx-auto max-w-6xl px-6 pb-24 pt-20 sm:pb-32 sm:pt-28 lg:px-8">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-700 backdrop-blur dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Week 2 · Design complete
+            <span className="relative inline-block h-2 w-2">
+              <span className="absolute inset-0 animate-ping rounded-full bg-emerald-500 opacity-60" />
+              <span className="absolute inset-0 rounded-full bg-emerald-500" />
+            </span>
+            Live in production
           </span>
           <span className="text-xs text-slate-500 dark:text-slate-400">
             NYU Cloud Computing · Spring 2026
@@ -18,14 +21,13 @@ export function Hero() {
         </div>
 
         <h1 className="mt-6 max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-          Summarize any research paper, <span className="gradient-text">in seconds</span>.
+          Summarize, <span className="gradient-text">question</span>, and visualize any research paper.
         </h1>
 
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">
-          A serverless AWS platform that searches open-access academic repositories,
-          fetches full-text PDFs, and produces structured summaries using Claude
-          Sonnet on Amazon Bedrock — objectives, methodology, results,
-          limitations, contributions.
+          A serverless AWS platform that searches arXiv and Semantic Scholar, fetches
+          full-text PDFs, and produces structured summaries plus a retrieval-augmented
+          chat and an interactive knowledge graph — all in about thirty seconds per paper.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center gap-3">
@@ -57,10 +59,10 @@ export function Hero() {
         </div>
 
         <dl className="mt-16 grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
-          <Stat value="100%" label="Serverless" />
-          <Stat value="5" label="Pipeline steps" />
-          <Stat value="12" label="AWS services" />
-          <Stat value="< 90s" label="Summary P95" />
+          <Stat value="~30s" label="Paper → summary" />
+          <Stat value="13" label="Lambdas, 7 stacks" />
+          <Stat value="$0.20" label="Per summary" />
+          <Stat value="0" label="Idle cost" />
         </dl>
       </div>
     </section>
