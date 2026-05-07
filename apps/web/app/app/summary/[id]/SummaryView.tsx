@@ -78,6 +78,13 @@ export default function SummaryView({ id }: { id: string }) {
               View original PDF ↗
             </a>
           ) : null}
+          <Link
+            href={`/app/summary/${summary.id}/graph`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500/40 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700 hover:border-cyan-500 hover:bg-cyan-100 dark:border-cyan-400/30 dark:bg-cyan-950/40 dark:text-cyan-300 dark:hover:border-cyan-400 dark:hover:bg-cyan-950/60"
+          >
+            <span className="text-[14px] leading-none">⌘</span>
+            <span>Knowledge graph</span>
+          </Link>
           <ExportButtons summary={summary} />
         </div>
 

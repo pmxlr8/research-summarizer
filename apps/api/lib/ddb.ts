@@ -46,6 +46,7 @@ type JobItem = {
   error?: string;
   sourceJobId?: string;
   paperEmbedding?: number[];
+  graph?: import("./types").KnowledgeGraph;
 };
 
 function itemToJob(item: JobItem): SummaryJob {
@@ -62,6 +63,7 @@ function itemToJob(item: JobItem): SummaryJob {
     error: item.error,
     sourceJobId: item.sourceJobId,
     paperEmbedding: item.paperEmbedding,
+    graph: item.graph,
   };
 }
 
@@ -76,6 +78,21 @@ export async function setPaperEmbedding(args: {
     Key: { PK: userPk(args.userId), SK: jobSk(args.jobId) },
     UpdateExpression: "SET paperEmbedding = :e",
     ExpressionAttributeValues: { ":e": args.embedding },
+  }));
+}
+
+/** Persist a generated knowledge graph on the JOB record. */
+export async function setGraph(args: {
+  userId: string;
+  jobId: string;
+  graph: import("./types").KnowledgeGraph;
+}): Promise<void> {
+  await ddb.send(new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: { PK: userPk(args.userId), SK: jobSk(args.jobId) },
+    UpdateExpression: "SET #g = :g",
+    ExpressionAttributeNames: { "#g": "graph" },
+    ExpressionAttributeValues: { ":g": args.graph },
   }));
 }
 

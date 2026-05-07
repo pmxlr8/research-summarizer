@@ -1,4 +1,4 @@
-import type { Paper, Summary } from "./types";
+import type { Paper, Summary, KnowledgeGraph } from "./types";
 import { getToken } from "./auth";
 import { mockPapers } from "@/data/mock-papers";
 import { mockSummaries } from "@/data/mock-summaries";
@@ -155,6 +155,15 @@ export async function getRelated(jobId: string): Promise<RelatedPaper[]> {
     }
   }
   return delay([]);
+}
+
+// ─── Knowledge graph ────────────────────────────────────────────────
+
+export async function getGraph(jobId: string): Promise<{ graph: KnowledgeGraph; generated: boolean }> {
+  if (USE_REAL) {
+    return apiFetch<{ graph: KnowledgeGraph; generated: boolean }>(`summaries/${jobId}/graph`);
+  }
+  return delay({ graph: { nodes: [], edges: [] }, generated: false });
 }
 
 // ─── Chat (Talk to PDF / RAG) ───────────────────────────────────────

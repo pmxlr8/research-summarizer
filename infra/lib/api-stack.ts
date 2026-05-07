@@ -162,6 +162,24 @@ export class ApiStack extends cdk.Stack {
     });
     props.table.grantReadData(getQuotaFn);
 
+    // Knowledge graph — extracts entities + relationships from the
+    // structured summary via Bedrock; lazily generated and cached on the
+    // JOB record.
+    const getGraphFn = new nodejs.NodejsFunction(this, "GetGraphFn", {
+      ...handlerProps,
+      entry: path.join(apiRoot, "handlers", "get-graph.ts"),
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 512,
+    });
+    props.table.grantReadWriteData(getGraphFn);
+    getGraphFn.addToRolePolicy(new cdk.aws_iam.PolicyStatement({
+      actions: ["bedrock:InvokeModel"],
+      resources: [
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:*:*:inference-profile/*",
+      ],
+    }));
+
     // Related papers — computes cosine similarity of the target paper's
     // mean embedding against every other DONE summary the user owns.
     const getRelatedFn = new nodejs.NodejsFunction(this, "GetRelatedFn", {
@@ -210,12 +228,13 @@ export class ApiStack extends cdk.Stack {
     const summaryById = summaries.addResource("{id}");
     summaryById.addMethod("GET", new apigw.LambdaIntegration(getSummaryFn), authProps);
     summaryById.addResource("related").addMethod("GET", new apigw.LambdaIntegration(getRelatedFn), authProps);
+    summaryById.addResource("graph").addMethod("GET", new apigw.LambdaIntegration(getGraphFn), authProps);
 
     api.root.addResource("quota").addMethod("GET", new apigw.LambdaIntegration(getQuotaFn), authProps);
     api.root.addResource("chat").addMethod("POST", new apigw.LambdaIntegration(chatFn), authProps);
 
     this.apiEndpoint = api.url;
-    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn, getQuotaFn, getRelatedFn, chatFn);
+    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn, getQuotaFn, getRelatedFn, getGraphFn, chatFn);
     // Active X-Ray tracing + IAM permission so the Lambda runtime can
     // actually write trace segments.
     this.handlerFns.forEach((fn) => {

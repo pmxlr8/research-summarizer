@@ -49,6 +49,13 @@ export class FrontendStack extends cdk.Stack {
           var req = event.request;
           var uri = req.uri;
 
+          // Dynamic summary graph route: /app/summary/<id>/graph → placeholder file.
+          var graphMatch = uri.match(/^\\/app\\/summary\\/([^/]+)\\/graph\\/?$/);
+          if (graphMatch) {
+            req.uri = '/app/summary/_view/graph/index.html';
+            return req;
+          }
+
           // Dynamic summary route: any /app/summary/<id>/ → placeholder file.
           var summaryMatch = uri.match(/^\\/app\\/summary\\/([^/]+)\\/?$/);
           if (summaryMatch) {

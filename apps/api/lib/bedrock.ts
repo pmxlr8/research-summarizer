@@ -195,6 +195,80 @@ export async function chat(args: {
   return invokeModel(args);
 }
 
+// ─── Knowledge graph extraction ─────────────────────────────────────
+
+import type { KnowledgeGraph } from "./types";
+
+const GRAPH_SYSTEM_PROMPT = `You are an expert at building knowledge graphs from academic papers. Given a structured paper summary, extract entities and relationships.
+
+Reply ONLY with valid JSON in this exact shape (no prose, no markdown fences):
+{
+  "nodes": [
+    {"id": "snake_case_id", "label": "Display Label", "type": "method|dataset|metric|task|concept|result", "summary": "one concise sentence"}
+  ],
+  "edges": [
+    {"source": "node_id_1", "target": "node_id_2", "label": "short verb phrase", "type": "uses|achieves|extends|evaluated_on|introduces|cites|compares_with"}
+  ]
+}
+
+Hard rules:
+- 8 to 22 nodes. Pick the MOST important ones; do not pad with vague concepts.
+- 8 to 35 edges. Every edge's source and target MUST be a node id from the nodes array.
+- Node ids in lowercase snake_case (e.g., "self_attention", "wmt_2014").
+- Node "type" picks one of: method (algorithms, architectures, models), dataset, metric (e.g., BLEU, F1), task (e.g., translation), concept (theoretical idea), result (specific finding/number).
+- Edge "type" picks one of: uses, achieves, extends, evaluated_on, introduces, cites, compares_with.
+- Edge "label" is a short verb phrase (max 4 words).
+- "summary" on each node is ONE sentence.
+- No duplicate node ids. No self-loops.`;
+
+export async function extractKnowledgeGraph(args: {
+  paperTitle: string;
+  paperAuthors: string[];
+  abstract: string;
+  sections: SummarySection[];
+  keywords: string[];
+}): Promise<KnowledgeGraph> {
+  const userMessage = [
+    `Paper: ${args.paperTitle}`,
+    `Authors: ${args.paperAuthors.slice(0, 5).join(", ")}`,
+    "",
+    `Abstract: ${args.abstract}`,
+    "",
+    "Structured summary:",
+    ...args.sections.map((s) => `\n## ${s.heading}\n` + s.bullets.map((b) => `- ${b}`).join("\n")),
+    "",
+    `Keywords: ${(args.keywords ?? []).join(", ")}`,
+  ].join("\n");
+
+  const raw = await invokeModel({
+    system: GRAPH_SYSTEM_PROMPT,
+    user: userMessage,
+    maxTokens: 3000,
+  });
+  const parsed = parseJson<KnowledgeGraph>(raw);
+  return sanitizeGraph(parsed);
+}
+
+/** Drop dangling edges, dedupe, clamp counts so the UI doesn't drown. */
+function sanitizeGraph(g: KnowledgeGraph): KnowledgeGraph {
+  const seenIds = new Set<string>();
+  const nodes = g.nodes
+    .filter((n) => {
+      if (!n.id || !n.label) return false;
+      if (seenIds.has(n.id)) return false;
+      seenIds.add(n.id);
+      return true;
+    })
+    .slice(0, 25);
+
+  const validIds = new Set(nodes.map((n) => n.id));
+  const edges = g.edges
+    .filter((e) => e.source !== e.target && validIds.has(e.source) && validIds.has(e.target))
+    .slice(0, 40);
+
+  return { nodes, edges };
+}
+
 function parseJson<T>(raw: string): T {
   // Models occasionally wrap output in ```json fences or add stray text.
   let cleaned = raw.trim()

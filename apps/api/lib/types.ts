@@ -34,6 +34,46 @@ export type SummaryJob = {
   // Paper-level mean embedding (avg of chunk vectors). Used for the
   // "related papers" feature; lazily filled if not present.
   paperEmbedding?: number[];
+  // Knowledge graph extracted from the structured summary; lazily generated.
+  graph?: KnowledgeGraph;
+};
+
+// ─── Knowledge graph ────────────────────────────────────────────────
+
+export type GraphNodeType =
+  | "method"
+  | "dataset"
+  | "metric"
+  | "task"
+  | "concept"
+  | "result";
+
+export type GraphEdgeType =
+  | "uses"
+  | "achieves"
+  | "extends"
+  | "evaluated_on"
+  | "introduces"
+  | "cites"
+  | "compares_with";
+
+export type GraphNode = {
+  id: string;
+  label: string;
+  type: GraphNodeType;
+  summary: string;
+};
+
+export type GraphEdge = {
+  source: string;
+  target: string;
+  label: string;
+  type: GraphEdgeType;
+};
+
+export type KnowledgeGraph = {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 };
 
 // Internal payload threaded through the Step Functions state machine.
