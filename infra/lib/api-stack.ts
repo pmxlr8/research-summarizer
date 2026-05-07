@@ -162,6 +162,23 @@ export class ApiStack extends cdk.Stack {
     });
     props.table.grantReadData(getQuotaFn);
 
+    // Related papers — computes cosine similarity of the target paper's
+    // mean embedding against every other DONE summary the user owns.
+    const getRelatedFn = new nodejs.NodejsFunction(this, "GetRelatedFn", {
+      ...handlerProps,
+      entry: path.join(apiRoot, "handlers", "get-related.ts"),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 512,
+    });
+    props.table.grantReadWriteData(getRelatedFn);
+    getRelatedFn.addToRolePolicy(new cdk.aws_iam.PolicyStatement({
+      actions: ["bedrock:InvokeModel"],
+      resources: [
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:*:*:inference-profile/*",
+      ],
+    }));
+
     // Chat (RAG) handler — reads chunks + embeddings from DDB, embeds the
     // question via Bedrock Titan, ranks chunks, prompts the LLM.
     const chatFn = new nodejs.NodejsFunction(this, "ChatFn", {
@@ -192,12 +209,13 @@ export class ApiStack extends cdk.Stack {
 
     const summaryById = summaries.addResource("{id}");
     summaryById.addMethod("GET", new apigw.LambdaIntegration(getSummaryFn), authProps);
+    summaryById.addResource("related").addMethod("GET", new apigw.LambdaIntegration(getRelatedFn), authProps);
 
     api.root.addResource("quota").addMethod("GET", new apigw.LambdaIntegration(getQuotaFn), authProps);
     api.root.addResource("chat").addMethod("POST", new apigw.LambdaIntegration(chatFn), authProps);
 
     this.apiEndpoint = api.url;
-    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn, getQuotaFn, chatFn);
+    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn, getQuotaFn, getRelatedFn, chatFn);
     // Active X-Ray tracing + IAM permission so the Lambda runtime can
     // actually write trace segments.
     this.handlerFns.forEach((fn) => {

@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { getSummary } from "@/lib/api";
 import type { Summary } from "@/lib/types";
 import { ChatPanel } from "@/app/components/ChatPanel";
+import { ExportButtons } from "@/app/components/ExportButtons";
+import { RelatedPapers } from "@/app/components/RelatedPapers";
 
 export default function SummaryView({ id }: { id: string }) {
   const [summary, setSummary] = useState<Summary | null | undefined>(undefined);
@@ -65,16 +67,19 @@ export default function SummaryView({ id }: { id: string }) {
           {summary.paper.venue ? ` · ${summary.paper.venue} ${summary.paper.year}` : ` · ${summary.paper.year}`}
         </p>
 
-        {summary.paper.pdfUrl ? (
-          <a
-            href={summary.paper.pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            View original PDF ↗
-          </a>
-        ) : null}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {summary.paper.pdfUrl ? (
+            <a
+              href={summary.paper.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-cyan-500 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-cyan-400 dark:hover:text-cyan-300"
+            >
+              View original PDF ↗
+            </a>
+          ) : null}
+          <ExportButtons summary={summary} />
+        </div>
 
         {summary.keywords && summary.keywords.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-2">
@@ -132,7 +137,12 @@ export default function SummaryView({ id }: { id: string }) {
         ))}
       </section>
 
-      {summary.status === "done" ? <ChatPanel jobId={summary.id} /> : null}
+      {summary.status === "done" ? (
+        <>
+          <ChatPanel jobId={summary.id} />
+          <RelatedPapers jobId={summary.id} />
+        </>
+      ) : null}
 
       <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">
         <Link

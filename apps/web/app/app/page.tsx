@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listSummaries, getQuota } from "@/lib/api";
+import { addSearch } from "@/lib/searchHistory";
+import { SearchHistory } from "@/app/components/SearchHistory";
 import type { Summary } from "@/lib/types";
 
 export default function DashboardPage() {
@@ -38,9 +40,16 @@ export default function DashboardPage() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (query.trim()) {
-      router.push(`/app/search?q=${encodeURIComponent(query.trim())}`);
+    const q = query.trim();
+    if (q) {
+      addSearch(q);
+      router.push(`/app/search?q=${encodeURIComponent(q)}`);
     }
+  }
+
+  function pickHistory(q: string) {
+    addSearch(q);
+    router.push(`/app/search?q=${encodeURIComponent(q)}`);
   }
 
   const doneCount = summaries?.filter((s) => s.status === "done").length ?? 0;
@@ -52,8 +61,10 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       </div>
 
+      <SearchHistory onPick={pickHistory} className="mt-8" />
+
       {/* Search bar */}
-      <form onSubmit={handleSearch} className="mt-8 flex gap-2">
+      <form onSubmit={handleSearch} className="mt-4 flex gap-2">
         <input
           type="search"
           value={query}

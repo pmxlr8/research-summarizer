@@ -45,6 +45,7 @@ type JobItem = {
   keywords?: string[];
   error?: string;
   sourceJobId?: string;
+  paperEmbedding?: number[];
 };
 
 function itemToJob(item: JobItem): SummaryJob {
@@ -60,7 +61,22 @@ function itemToJob(item: JobItem): SummaryJob {
     keywords: item.keywords,
     error: item.error,
     sourceJobId: item.sourceJobId,
+    paperEmbedding: item.paperEmbedding,
   };
+}
+
+/** Persist a paper-level mean embedding on the JOB record. */
+export async function setPaperEmbedding(args: {
+  userId: string;
+  jobId: string;
+  embedding: number[];
+}): Promise<void> {
+  await ddb.send(new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: { PK: userPk(args.userId), SK: jobSk(args.jobId) },
+    UpdateExpression: "SET paperEmbedding = :e",
+    ExpressionAttributeValues: { ":e": args.embedding },
+  }));
 }
 
 // ─── Public operations ──────────────────────────────────────────────

@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { searchPapers, submitSummary, ApiError } from "@/lib/api";
 import type { Paper } from "@/lib/types";
 import { useToast } from "@/app/components/Toaster";
+import { SearchHistory } from "@/app/components/SearchHistory";
+import { addSearch } from "@/lib/searchHistory";
 
 function SearchInner() {
   const router = useRouter();
@@ -20,6 +22,7 @@ function SearchInner() {
   useEffect(() => {
     if (initialQuery) {
       setLoading(true);
+      addSearch(initialQuery);
       searchPapers(initialQuery).then((r) => {
         setResults(r);
         setLoading(false);
@@ -31,6 +34,11 @@ function SearchInner() {
     e.preventDefault();
     const q = query.trim();
     if (q) router.push(`/app/search?q=${encodeURIComponent(q)}`);
+  }
+
+  function pickHistory(q: string) {
+    setQuery(q);
+    router.push(`/app/search?q=${encodeURIComponent(q)}`);
   }
 
   async function handleSummarize(paper: Paper) {
@@ -88,7 +96,10 @@ function SearchInner() {
             ))}
           </div>
         ) : results === null ? (
-          <SearchPromptState />
+          <>
+            <SearchPromptState />
+            <SearchHistory onPick={pickHistory} className="mt-6" />
+          </>
         ) : results.length === 0 ? (
           <NoResultsState q={initialQuery} />
         ) : (

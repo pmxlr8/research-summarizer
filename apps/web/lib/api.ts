@@ -136,6 +136,27 @@ export async function getQuota(): Promise<{ quotaRemaining: number }> {
   return delay({ quotaRemaining: 10 });
 }
 
+// ─── Related papers ─────────────────────────────────────────────────
+
+export type RelatedPaper = {
+  id: string;
+  paper: Paper;
+  score: number;
+  keywords: string[];
+};
+
+export async function getRelated(jobId: string): Promise<RelatedPaper[]> {
+  if (USE_REAL) {
+    try {
+      const res = await apiFetch<{ related: RelatedPaper[] }>(`summaries/${jobId}/related`);
+      return res.related;
+    } catch {
+      return [];
+    }
+  }
+  return delay([]);
+}
+
 // ─── Chat (Talk to PDF / RAG) ───────────────────────────────────────
 
 export type ChatCitation = {

@@ -31,6 +31,9 @@ export type SummaryJob = {
   // For deduped jobs: the original jobId that ran the pipeline. Used by
   // the chat endpoint to find the source chunks for RAG retrieval.
   sourceJobId?: string;
+  // Paper-level mean embedding (avg of chunk vectors). Used for the
+  // "related papers" feature; lazily filled if not present.
+  paperEmbedding?: number[];
 };
 
 // Internal payload threaded through the Step Functions state machine.

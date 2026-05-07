@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { askPaper, ApiError, type ChatCitation } from "@/lib/api";
 import { useToast } from "./Toaster";
+import { CitationText } from "./CitationText";
 
 type Turn = {
   id: number;
@@ -135,7 +136,7 @@ export function ChatPanel({ jobId }: { jobId: string }) {
                 ) : t.error ? (
                   <span className="text-red-600 dark:text-red-400">{t.error}</span>
                 ) : (
-                  <p className="whitespace-pre-wrap">{t.answer}</p>
+                  <CitationText text={t.answer ?? ""} citations={t.citations} />
                 )}
               </div>
 
