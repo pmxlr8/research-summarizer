@@ -53,7 +53,15 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Password</label>
+            <div className="flex items-baseline justify-between">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Password</label>
+              <Link
+                href={email ? `/forgot?email=${encodeURIComponent(email)}` : "/forgot"}
+                className="text-xs text-cyan-600 hover:underline dark:text-cyan-400"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               required
