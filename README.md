@@ -32,7 +32,7 @@ A serverless AWS platform that searches arXiv and Semantic Scholar, fetches full
 
 ![Architecture](docs/diagrams/Architecture.png)
 
-Seven CDK stacks:
+Six CDK stacks:
 
 | Stack | Resources |
 |---|---|
@@ -65,11 +65,13 @@ research-summarizer/
 │   ├── bin/app.ts
 │   └── lib/                        # auth, data, pipeline, api, frontend, ops stacks
 ├── docs/
-│   ├── reports/                    # Week 2 report, upgrade proposal, execution guide
+│   ├── Final_Report.md             # Source for the IEEE final report
+│   ├── Final_Report.pdf            # Compiled IEEE-style PDF (8 pages, 7 figures)
+│   ├── ieee.css                    # IEEE two-column stylesheet for weasyprint
+│   ├── figures/                    # UI screenshots embedded in the report
 │   ├── diagrams/                   # Architecture diagrams (PNG + SVG)
-│   ├── STATUS.md                   # Live status of every component
-│   ├── Final_Submission_Pack.md    # Complete content for the IEEE report + slides + demo
-│   └── Vision.md                   # Future-work catalog
+│   ├── reports/                    # Week 2 report, upgrade proposal, execution guide PDFs
+│   └── source/                     # Markdown source for the PDFs in reports/
 ├── scripts/deploy.sh               # One-command deploy
 └── .github/workflows/ci.yml        # Lint + build on every PR
 ```
@@ -92,7 +94,7 @@ npx cdk diff           # changes vs the deployed stack
 # npx cdk deploy --all # don't run without team alignment
 ```
 
-`scripts/deploy.sh` is a one-command wrapper that bootstraps, deploys all seven stacks, builds the frontend with the resulting Cognito + API config baked in, uploads to S3, and invalidates the CloudFront cache.
+`scripts/deploy.sh` is a one-command wrapper that bootstraps, deploys all six stacks, builds the frontend with the resulting Cognito + API config baked in, uploads to S3, and invalidates the CloudFront cache.
 
 ## Tech Stack
 
@@ -111,8 +113,9 @@ Idle infrastructure cost is **$0**. Every component except Bedrock fits the AWS 
 
 | File | What |
 |---|---|
-| `docs/STATUS.md` | Live status of every deployed component |
-| `docs/Final_Submission_Pack.md` | Full content for the IEEE report, slide deck, YouTube script, and Q&A prep |
-| `docs/reports/` | Week 2 report, team upgrade proposal, execution guide PDFs |
+| `docs/Final_Report.pdf` | IEEE-style final report (8 pages, two-column, 7 figures) |
+| `docs/Final_Report.md` | Markdown source for the final report |
 | `docs/diagrams/` | Architecture diagrams (PNG + SVG, landscape + portrait) |
-| `docs/Vision.md` | Future-work catalog with effort and impact estimates |
+| `docs/figures/` | UI screenshots embedded in the report |
+| `docs/reports/` | Week 2 report, team upgrade proposal, execution guide PDFs (already submitted earlier in the term) |
+| `docs/source/` | Markdown source for the PDFs in `docs/reports/` |

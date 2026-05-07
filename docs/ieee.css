@@ -146,3 +146,41 @@ blockquote {
 
 /* Avoid awkward orphans */
 p, li { orphans: 2; widows: 2; }
+
+/* Figures: by default a figure stays inside one column, captioned below */
+figure {
+  margin: 6pt 0;
+  text-align: center;
+  break-inside: avoid;
+}
+figure img {
+  max-width: 100%;
+  height: auto;
+}
+figcaption {
+  margin-top: 2pt;
+  font-size: 8.5pt;
+  text-align: center;
+  font-style: italic;
+}
+
+/* A figure marked .span spans both columns (used for the wide architecture diagram) */
+figure.span {
+  column-span: all;
+  margin: 6pt 0 8pt 0;
+}
+
+/* Plain markdown images become figures via a small post-processing rule;
+   when pandoc renders an image with its own paragraph + alt-text caption,
+   center the paragraph and italicize the next line. */
+p > img {
+  display: block;
+  margin: 4pt auto 1pt auto;
+  max-width: 100%;
+}
+p.caption, p > em:only-child {
+  font-style: italic;
+  text-align: center;
+  font-size: 8.5pt;
+  text-indent: 0;
+}

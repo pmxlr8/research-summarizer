@@ -33,7 +33,7 @@ export class AuthStack extends cdk.Stack {
     });
 
     this.userPoolClient = this.userPool.addClient("WebClient", {
-      authFlows: { userSrp: true, userPassword: false },
+      authFlows: { userSrp: true, adminUserPassword: false, userPassword: false },
       generateSecret: false, // SPA: no client secret
       preventUserExistenceErrors: true,
       accessTokenValidity: cdk.Duration.hours(1),
