@@ -1,5 +1,7 @@
 # Research Paper Summarizer
 
+[![CI](https://github.com/pmxlr8/research-summarizer/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pmxlr8/research-summarizer/actions/workflows/ci.yml)
+
 A serverless AWS platform that searches arXiv and Semantic Scholar, fetches full-text PDFs, and produces structured summaries (Objectives, Methodology, Results, Limitations, Contributions) using a large language model on Amazon Bedrock. On top of every summary you can chat with the paper (RAG with cited chunks), explore an auto-extracted knowledge graph of entities and relationships, and discover similar papers from your own library.
 
 > NYU Cloud Computing, Spring 2026

@@ -170,6 +170,10 @@ export class ApiStack extends cdk.Stack {
       entry: path.join(apiRoot, "handlers", "get-graph.ts"),
       timeout: cdk.Duration.seconds(60),
       memorySize: 512,
+      environment: {
+        ...handlerProps.environment,
+        BEDROCK_MODEL_ID: "us.anthropic.claude-sonnet-4-6",
+      },
     });
     props.table.grantReadWriteData(getGraphFn);
     getGraphFn.addToRolePolicy(new cdk.aws_iam.PolicyStatement({
@@ -207,6 +211,7 @@ export class ApiStack extends cdk.Stack {
       environment: {
         ...handlerProps.environment,
         PDF_BUCKET: props.pdfBucket.bucketName,
+        BEDROCK_MODEL_ID: "us.anthropic.claude-sonnet-4-6",
       },
     });
     props.table.grantReadWriteData(chatFn);
