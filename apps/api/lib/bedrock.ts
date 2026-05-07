@@ -12,6 +12,7 @@ const REGION = process.env.AWS_REGION ?? "us-east-1";
 // Swap to "us.anthropic.claude-sonnet-4-5-20250929-v1:0" once the
 // AWS account has Anthropic access enabled.
 const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "qwen.qwen3-next-80b-a3b";
+const EMBED_MODEL_ID = process.env.BEDROCK_EMBED_MODEL_ID ?? "amazon.titan-embed-text-v2:0";
 
 const bedrock = new BedrockRuntimeClient({ region: REGION });
 
@@ -142,6 +143,56 @@ async function invokeModel(args: {
     }
   }
   throw lastErr;
+}
+
+// ─── Embeddings ─────────────────────────────────────────────────────
+
+/** Generate a dense vector embedding for the given text using Titan v2. */
+export async function embedText(text: string): Promise<number[]> {
+  const body = {
+    inputText: text.slice(0, 50_000), // Titan accepts up to ~50K characters
+    dimensions: 1024,
+    normalize: true,
+  };
+
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await bedrock.send(new InvokeModelCommand({
+        modelId: EMBED_MODEL_ID,
+        body: Buffer.from(JSON.stringify(body)),
+        contentType: "application/json",
+      }));
+      const decoded = JSON.parse(new TextDecoder().decode(res.body));
+      const vec = decoded?.embedding;
+      if (!Array.isArray(vec)) throw new Error("unexpected embed response shape");
+      return vec as number[];
+    } catch (err) {
+      lastErr = err;
+      const name = (err as { name?: string }).name ?? "";
+      const transient = ["ThrottlingException", "ServiceUnavailableException", "ModelTimeoutException"].includes(name);
+      if (!transient || attempt === 3) throw err;
+      await new Promise((r) => setTimeout(r, attempt * 2000));
+    }
+  }
+  throw lastErr;
+}
+
+/** Cosine similarity between two equally-sized vectors. */
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
+  return dot; // vectors are pre-normalized by Titan, so dot product == cosine
+}
+
+/** Free-form chat completion (used by /chat endpoint). */
+export async function chat(args: {
+  system: string;
+  user: string;
+  maxTokens: number;
+}): Promise<string> {
+  return invokeModel(args);
 }
 
 function parseJson<T>(raw: string): T {

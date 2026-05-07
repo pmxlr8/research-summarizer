@@ -20,12 +20,12 @@ date: "2026-05-06"
 
 # 2. Team
 
-| Member | NetID | GitHub | Area owned |
+| Member | GitHub | Area owned |
 |---|---|---|---|
-| Pranjal Mishra | _PM-NETID_ | [pmxlr8](https://github.com/pmxlr8) | Architecture, frontend, infra (CDK), Phase 0-3 lead |
-| Shreyas Sankpal | _SS-NETID_ | _username_ | Pipeline orchestration |
-| Yang Zheng | _YZ-NETID_ | [Ezreal222](https://github.com/Ezreal222) | Search Lambda, arXiv integration, tests |
-| Kerry Huang | _KH-NETID_ | [kerry-huang-nyu](https://github.com/kerry-huang-nyu) | Auth, API |
+| Pranjal Mishra  | [pmxlr8](https://github.com/pmxlr8) | Architecture, frontend, infra (CDK), Phase 0-3 lead |
+| Shreyas Sankpal | _username_ | Pipeline orchestration |
+| Yang Zheng | [Ezreal222](https://github.com/Ezreal222) | Search Lambda, arXiv integration, tests |
+| Kerry Huang | [kerry-huang-nyu](https://github.com/kerry-huang-nyu) | Auth, API |
 
 > Replace `_*-NETID_` with each person's NYU NetID before submission.
 

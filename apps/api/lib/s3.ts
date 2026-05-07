@@ -2,6 +2,7 @@ import {
   S3Client,
   GetObjectCommand,
   PutObjectCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 
 const REGION = process.env.AWS_REGION ?? "us-east-1";
@@ -57,4 +58,15 @@ export async function getBytes(key: string): Promise<Buffer> {
 
 export async function getText(key: string): Promise<string> {
   return (await getBytes(key)).toString("utf-8");
+}
+
+export async function listChunkKeys(jobId: string): Promise<string[]> {
+  const res = await s3.send(new ListObjectsV2Command({
+    Bucket: PDF_BUCKET,
+    Prefix: `chunks/${jobId}/`,
+  }));
+  return (res.Contents ?? [])
+    .map((o) => o.Key!)
+    .filter(Boolean)
+    .sort();
 }

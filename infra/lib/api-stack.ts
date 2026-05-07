@@ -13,6 +13,7 @@ interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
   table: dynamodb.Table;
   jobsQueue: sqs.Queue;
+  pdfBucket: import("aws-cdk-lib/aws-s3").IBucket;
 }
 
 /**
@@ -161,6 +162,28 @@ export class ApiStack extends cdk.Stack {
     });
     props.table.grantReadData(getQuotaFn);
 
+    // Chat (RAG) handler — reads chunks + embeddings from DDB, embeds the
+    // question via Bedrock Titan, ranks chunks, prompts the LLM.
+    const chatFn = new nodejs.NodejsFunction(this, "ChatFn", {
+      ...handlerProps,
+      entry: path.join(apiRoot, "handlers", "chat.ts"),
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 512,
+      environment: {
+        ...handlerProps.environment,
+        PDF_BUCKET: props.pdfBucket.bucketName,
+      },
+    });
+    props.table.grantReadWriteData(chatFn);
+    props.pdfBucket.grantRead(chatFn);
+    chatFn.addToRolePolicy(new cdk.aws_iam.PolicyStatement({
+      actions: ["bedrock:InvokeModel"],
+      resources: [
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:*:*:inference-profile/*",
+      ],
+    }));
+
     const summarize = api.root.addResource("summarize");
     summarize.addMethod("POST", new apigw.LambdaIntegration(submitJobFn), authProps);
 
@@ -171,9 +194,10 @@ export class ApiStack extends cdk.Stack {
     summaryById.addMethod("GET", new apigw.LambdaIntegration(getSummaryFn), authProps);
 
     api.root.addResource("quota").addMethod("GET", new apigw.LambdaIntegration(getQuotaFn), authProps);
+    api.root.addResource("chat").addMethod("POST", new apigw.LambdaIntegration(chatFn), authProps);
 
     this.apiEndpoint = api.url;
-    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn, getQuotaFn);
+    this.handlerFns.push(healthFn, searchFn, submitJobFn, getSummaryFn, listSummariesFn, getQuotaFn, chatFn);
     // Active X-Ray tracing + IAM permission so the Lambda runtime can
     // actually write trace segments.
     this.handlerFns.forEach((fn) => {

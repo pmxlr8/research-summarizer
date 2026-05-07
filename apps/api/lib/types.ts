@@ -28,6 +28,9 @@ export type SummaryJob = {
   sections?: SummarySection[];
   keywords?: string[];
   error?: string;
+  // For deduped jobs: the original jobId that ran the pipeline. Used by
+  // the chat endpoint to find the source chunks for RAG retrieval.
+  sourceJobId?: string;
 };
 
 // Internal payload threaded through the Step Functions state machine.

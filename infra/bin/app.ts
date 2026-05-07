@@ -31,6 +31,7 @@ const api = new ApiStack(app, `${prefix}-Api`, {
   userPool: auth.userPool,
   table: data.table,
   jobsQueue: pipeline.jobsQueue,
+  pdfBucket: data.pdfBucket,
 });
 const frontend = new FrontendStack(app, `${prefix}-Frontend`, {
   env,

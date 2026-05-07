@@ -1,4 +1,4 @@
-## Hey team — submission day is tomorrow, here's where we stand
+## submission day is tomorrow, here's where we stand
 
 ### Live links
 - **Site:** https://d24irdkbe9jj2b.cloudfront.net
@@ -44,15 +44,3 @@ I can grind out everything solo if I have to but it'll go faster if we split. Pi
 - **Final report** — I can draft it, but a second pair of eyes reviewing and tightening the writing would help a lot
 - **Slide deck** — same, draft + review
 - **Demo video** — I'll record from the live site, but if anyone wants to be the on-camera narrator, that'd actually be better
-- **Heavy-hitter feature A/B/C/D** — if you want to own this, claim it in the next few hours, otherwise I'll just pick A and ship it
-
-Also: where is everyone? Yang, your search Lambda was great work — you in for the rest? Kerry, you good to help with the report or slides? Shreyas, haven't heard from you at all on this thread, you alive? No judgment, just trying to plan around reality so I know if I'm flying solo or not.
-
-Reply with:
-1. Which feature (A/B/C/D, or none) we go with
-2. What you'll own from the submission list
-3. Honestly — are you in or should I assume solo?
-
-I'll be working through the report + a heavy-hitter feature regardless. Just want to know whether to wait for input or just ship.
-
-— Pranjal

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSummary } from "@/lib/api";
 import type { Summary } from "@/lib/types";
+import { ChatPanel } from "@/app/components/ChatPanel";
 
 export default function SummaryView({ id }: { id: string }) {
   const [summary, setSummary] = useState<Summary | null | undefined>(undefined);
@@ -130,6 +131,8 @@ export default function SummaryView({ id }: { id: string }) {
           </div>
         ))}
       </section>
+
+      {summary.status === "done" ? <ChatPanel jobId={summary.id} /> : null}
 
       <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">
         <Link

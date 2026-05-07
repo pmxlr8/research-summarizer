@@ -44,6 +44,7 @@ type JobItem = {
   sections?: SummarySection[];
   keywords?: string[];
   error?: string;
+  sourceJobId?: string;
 };
 
 function itemToJob(item: JobItem): SummaryJob {
@@ -58,6 +59,7 @@ function itemToJob(item: JobItem): SummaryJob {
     sections: item.sections,
     keywords: item.keywords,
     error: item.error,
+    sourceJobId: item.sourceJobId,
   };
 }
 
@@ -150,8 +152,63 @@ export async function createDedupedJob(args: {
     durationSeconds: 0, // signals "instant" for the UI
     sections: args.source.sections,
     keywords: args.source.keywords,
+    sourceJobId: args.source.id,
   };
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+}
+
+// ─── Chunk embeddings (for RAG / Talk-to-PDF) ──────────────────────
+//
+// Stored under a separate partition to keep them out of the user's job
+// view. Brute-force cosine similarity at query time is fine for ≤30
+// chunks per paper.
+//
+//   PK = JOB#{jobId}
+//   SK = CHUNK#{n}     (n is the zero-padded chunk index)
+//   text     (string)  — the chunk text, used to build the LLM prompt
+//   embedding (list of N) — Titan v2 normalized vector
+
+const chunkPk = (jobId: string) => `JOB#${jobId}`;
+const chunkSk = (n: number) => `CHUNK#${String(n).padStart(4, "0")}`;
+
+export type ChunkRecord = {
+  jobId: string;
+  index: number;
+  text: string;
+  embedding: number[];
+};
+
+export async function putChunkEmbedding(args: {
+  jobId: string;
+  index: number;
+  text: string;
+  embedding: number[];
+}): Promise<void> {
+  await ddb.send(new PutCommand({
+    TableName: TABLE_NAME,
+    Item: {
+      PK: chunkPk(args.jobId),
+      SK: chunkSk(args.index),
+      jobId: args.jobId,
+      chunkIndex: args.index,
+      text: args.text,
+      embedding: args.embedding,
+    },
+  }));
+}
+
+export async function getChunkEmbeddings(jobId: string): Promise<ChunkRecord[]> {
+  const res = await ddb.send(new QueryCommand({
+    TableName: TABLE_NAME,
+    KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+    ExpressionAttributeValues: { ":pk": chunkPk(jobId), ":sk": "CHUNK#" },
+  }));
+  return (res.Items ?? []).map((item) => ({
+    jobId: item.jobId as string,
+    index: item.chunkIndex as number,
+    text: item.text as string,
+    embedding: item.embedding as number[],
+  }));
 }
 
 // ─── Quota ──────────────────────────────────────────────────────────

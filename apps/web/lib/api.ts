@@ -136,6 +136,35 @@ export async function getQuota(): Promise<{ quotaRemaining: number }> {
   return delay({ quotaRemaining: 10 });
 }
 
+// ─── Chat (Talk to PDF / RAG) ───────────────────────────────────────
+
+export type ChatCitation = {
+  index: number;
+  chunkIndex: number;
+  snippet: string;
+  score: number;
+};
+
+export type ChatResponse = {
+  answer: string;
+  citations: ChatCitation[];
+};
+
+export async function askPaper(jobId: string, question: string): Promise<ChatResponse> {
+  if (USE_REAL) {
+    return apiFetch<ChatResponse>("chat", {
+      method: "POST",
+      body: JSON.stringify({ jobId, question }),
+    });
+  }
+  return delay({
+    answer: "(mock) The paper proposes the Transformer architecture, which uses self-attention to model sequence dependencies without recurrence or convolutions [1].",
+    citations: [
+      { index: 1, chunkIndex: 0, snippet: "We propose a new simple network architecture, the Transformer, based solely on attention mechanisms…", score: 0.91 },
+    ],
+  });
+}
+
 // ─── Expose mode for debugging ──────────────────────────────────────
 
 export const apiMode: "real" | "mock" = USE_REAL ? "real" : "mock";
