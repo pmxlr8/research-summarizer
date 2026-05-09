@@ -1,6 +1,8 @@
 # Research Paper Summarizer
 
 [![CI](https://github.com/pmxlr8/research-summarizer/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pmxlr8/research-summarizer/actions/workflows/ci.yml)
+[![Live](https://img.shields.io/badge/live-d24irdkbe9jj2b.cloudfront.net-22d3ee?logo=amazon-aws&logoColor=white)](https://d24irdkbe9jj2b.cloudfront.net)
+[![Report](https://img.shields.io/badge/IEEE_report-PDF-c084fc)](docs/Final_Report.pdf)
 
 A serverless AWS platform that searches arXiv and Semantic Scholar, fetches full-text PDFs, and produces structured summaries (Objectives, Methodology, Results, Limitations, Contributions) using a large language model on Amazon Bedrock. On top of every summary you can chat with the paper (RAG with cited chunks), explore an auto-extracted knowledge graph of entities and relationships, and discover similar papers from your own library.
 
@@ -8,6 +10,16 @@ A serverless AWS platform that searches arXiv and Semantic Scholar, fetches full
 
 **Live demo:** https://d24irdkbe9jj2b.cloudfront.net
 **Status:** v1.0 in production. ~30s end-to-end summary, ~$0.20 per paper, $0 idle.
+
+## Demo
+
+[![Demo video](https://img.youtube.com/vi/jnWQbBjZMes/maxresdefault.jpg)](https://youtu.be/jnWQbBjZMes)
+
+▶ **[Watch the 4-minute demo on YouTube](https://youtu.be/jnWQbBjZMes)**
+
+## Final Report
+
+The full IEEE-format report (8 pages, two-column, 7 figures) is at **[docs/Final_Report.pdf](docs/Final_Report.pdf)**. Sections cover problem statement, motivation, related work, system architecture, architectural properties (microservices, scalability, reliability, latency, data storage, data pipeline), retrieval-augmented features, evaluation, and future work.
 
 ## Team
 
@@ -41,11 +53,21 @@ Six CDK stacks:
 | `Auth` | Cognito user pool + SPA client |
 | `Data` | DynamoDB single-table + GSI1 + S3 PDFs bucket (90-day lifecycle) |
 | `Pipeline` | SQS + DLQ + Step Functions state machine + 6 Lambdas |
-| `Api` | API Gateway REST + Cognito JWT authorizer + 8 handler Lambdas |
+| `Api` | API Gateway REST + Cognito JWT authorizer + 9 handler Lambdas |
 | `Frontend` | Private S3 + CloudFront with path-rewriter Function |
 | `Ops` | SNS + 4 CloudWatch alarms + Budgets + Dashboard |
 
-LLM surface is **Amazon Bedrock**: Qwen 3 Next 80B for text generation (Claude Sonnet swap-ready) and Titan Text Embeddings v2 for chunk vectors.
+LLM surface is **Amazon Bedrock**: Qwen 3 Next 80B for the high-volume map-reduce summarization, Claude Sonnet 4.6 for chat and knowledge graph extraction, and Titan Text Embeddings v2 for chunk vectors.
+
+## Numbers
+
+| | |
+|---|---|
+| End-to-end summary | **27–50 s** on real arXiv papers |
+| Marginal cost | **~$0.20 / paper** (dominated by Bedrock tokens) |
+| Idle monthly cost | **$0** (everything except Bedrock fits the AWS free tier) |
+| DLQ messages | **0** across the deployment |
+| Unit tests | **14**, all passing |
 
 ## Repository Layout
 
@@ -69,6 +91,7 @@ research-summarizer/
 ├── docs/
 │   ├── Final_Report.md             # Source for the IEEE final report
 │   ├── Final_Report.pdf            # Compiled IEEE-style PDF (8 pages, 7 figures)
+│   ├── presentation/               # 8-slide deck (HTML + PPTX)
 │   ├── ieee.css                    # IEEE two-column stylesheet for weasyprint
 │   ├── figures/                    # UI screenshots embedded in the report
 │   ├── diagrams/                   # Architecture diagrams (PNG + SVG)
@@ -104,7 +127,7 @@ npx cdk diff           # changes vs the deployed stack
 - **Frontend**: Next.js 14 (static export), Tailwind CSS, React Flow + dagre for the knowledge graph
 - **Infrastructure**: AWS CDK v2
 - **Runtime**: Node.js 20 LTS on Lambda
-- **LLM**: Qwen 3 Next 80B / Claude Sonnet (Amazon Bedrock); Titan Text Embeddings v2
+- **LLM**: Qwen 3 Next 80B + Claude Sonnet 4.6 (Amazon Bedrock); Titan Text Embeddings v2
 - **CI/CD**: GitHub Actions
 
 ## Cost Posture
@@ -115,9 +138,10 @@ Idle infrastructure cost is **$0**. Every component except Bedrock fits the AWS 
 
 | File | What |
 |---|---|
-| `docs/Final_Report.pdf` | IEEE-style final report (8 pages, two-column, 7 figures) |
-| `docs/Final_Report.md` | Markdown source for the final report |
-| `docs/diagrams/` | Architecture diagrams (PNG + SVG, landscape + portrait) |
-| `docs/figures/` | UI screenshots embedded in the report |
-| `docs/reports/` | Week 2 report, team upgrade proposal, execution guide PDFs (already submitted earlier in the term) |
-| `docs/source/` | Markdown source for the PDFs in `docs/reports/` |
+| [`docs/Final_Report.pdf`](docs/Final_Report.pdf) | IEEE-style final report (8 pages, two-column, 7 figures) |
+| [`docs/Final_Report.md`](docs/Final_Report.md) | Markdown source for the final report |
+| [`docs/presentation/Presentation.pptx`](docs/presentation/Presentation.pptx) | 8-slide presentation deck |
+| [`docs/diagrams/`](docs/diagrams/) | Architecture diagrams (PNG + SVG, landscape + portrait) |
+| [`docs/figures/`](docs/figures/) | UI screenshots embedded in the report |
+| [`docs/reports/`](docs/reports/) | Week 2 report, team upgrade proposal, execution guide PDFs |
+| [`docs/source/`](docs/source/) | Markdown source for the PDFs in `docs/reports/` |

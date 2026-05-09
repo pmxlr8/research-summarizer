@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Research Paper Summarizer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Serif:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-0: #07091a;
+    --bg-1: #0d1028;
+    --rule: rgba(148,163,184,0.20);
+    --rule-soft: rgba(148,163,184,0.10);
+    --ink-0: #f1f5f9;
+    --ink-1: #cbd5e1;
+    --ink-2: #94a3b8;
+    --ink-3: #64748b;
+    --accent: #38bdf8;
+    --accent-2: #c084fc;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #02030a; font-family: 'Inter', system-ui, sans-serif; color: var(--ink-0); -webkit-font-smoothing: antialiased; }
+  body { padding: 24px 0; }
+
+  .deck { display: flex; flex-direction: column; gap: 24px; align-items: center; }
+
+  /* Each slide is the canonical 1920x1080. We scale it on the screen so the
+     whole slide fits the viewport width. The actual layout dimensions stay
+     constant so PPT export is identical. */
+  .slide {
+    width: 1920px;
+    height: 1080px;
+    background: var(--bg-0);
+    position: relative;
+    overflow: hidden;
+    transform-origin: top left;
+    transform: scale(var(--fit-scale, 0.5));
+    border: 1px solid var(--rule);
+  }
+  .slide-spacer { /* invisible spacer to absorb the unused vertical space below the scaled slide */
+    width: 1px;
+    height: 0;
+  }
+
+  /* Subtle vignette so the dark navy reads as deliberate, not flat. Reserved
+     and tasteful, not the aurora-mesh look that screams "AI deck". */
+  .slide::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(1200px 700px at 0% 0%,   rgba(56,189,248,0.045) 0%, transparent 70%),
+      radial-gradient(1100px 700px at 100% 100%, rgba(192,132,252,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Universal slide chrome */
+  .meta-top {
+    position: absolute; top: 44px; left: 56px; right: 56px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600;
+  }
+  .meta-top .left  { color: var(--ink-2); }
+  .meta-top .right { color: var(--ink-3); }
+  .meta-bottom {
+    position: absolute; bottom: 36px; left: 56px; right: 56px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600;
+  }
+
+  /* Type scale — IBM Plex Serif on display headings for academic register */
+  .display { font-family: 'IBM Plex Serif', serif; font-size: 124px; line-height: 1.02; font-weight: 500; letter-spacing: -0.02em; margin: 0; color: var(--ink-0); }
+  .h-section { font-family: 'IBM Plex Serif', serif; font-size: 64px; line-height: 1.08; font-weight: 500; letter-spacing: -0.015em; margin: 0; color: var(--ink-0); }
+  .h-card  { font-size: 24px; font-weight: 600; letter-spacing: -0.005em; margin: 0; color: var(--ink-0); }
+  .lede    { font-size: 26px; line-height: 1.45; color: var(--ink-1); margin: 24px 0 0 0; max-width: 1500px; font-weight: 400; }
+  .body    { font-size: 18px; line-height: 1.55; color: var(--ink-1); margin: 0; font-weight: 400; }
+  .label   { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+
+  /* Slide 1 — Title */
+  .s-title { padding: 200px 96px 0 96px; }
+  .s-title .institution { font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 80px; padding-bottom: 18px; border-bottom: 1px solid var(--rule); display: inline-block; padding-right: 80px; }
+  .s-title h1 { font-family: 'IBM Plex Serif', serif; font-size: 152px; line-height: 0.96; letter-spacing: -0.025em; font-weight: 500; margin: 0 0 36px 0; color: var(--ink-0); max-width: 1700px; }
+  .s-title .accent-rule { width: 200px; height: 3px; background: var(--accent); margin-bottom: 36px; }
+  .s-title h2 { font-family: 'Inter', sans-serif; font-size: 30px; font-weight: 400; line-height: 1.42; color: var(--ink-1); margin: 0 0 0 0; max-width: 1500px; }
+  .s-title .footer-block { position: absolute; left: 96px; right: 96px; bottom: 96px; display: flex; justify-content: space-between; align-items: end; padding-top: 24px; border-top: 1px solid var(--rule); }
+  .s-title .authors { font-size: 22px; color: var(--ink-1); font-weight: 500; }
+  .s-title .authors small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-3); margin-top: 8px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; }
+  .s-title .url { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--accent); }
+
+  /* Slide 2 — System at a glance */
+  .s-overview { padding: 132px 96px 96px 96px; }
+  .s-overview .stat-row { display: flex; align-items: baseline; gap: 36px; margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--rule); }
+  .s-overview .stat-num { font-family: 'IBM Plex Serif', serif; font-size: 120px; font-weight: 500; line-height: 1; letter-spacing: -0.02em; color: var(--accent); }
+  .s-overview .stat-text { font-size: 22px; color: var(--ink-1); max-width: 900px; line-height: 1.5; }
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 64px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .pillar { padding: 36px 28px 36px 28px; border-right: 1px solid var(--rule); }
+  .pillar:last-child { border-right: none; }
+  .pillar .num { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); letter-spacing: 0.16em; font-weight: 600; margin-bottom: 16px; }
+  .pillar h3 { font-family: 'IBM Plex Serif', serif; font-size: 28px; font-weight: 500; margin: 0 0 14px 0; line-height: 1.2; letter-spacing: -0.01em; color: var(--ink-0); }
+  .pillar p { font-size: 17px; color: var(--ink-1); line-height: 1.55; margin: 0; font-weight: 400; }
+
+  /* Slide 3 — Architecture */
+  .s-arch { padding: 132px 64px 96px 64px; display: flex; flex-direction: column; }
+  .s-arch h1 { font-size: 48px; max-width: 1400px; margin: 0 0 12px 0; }
+  .s-arch .lede { font-size: 20px; margin: 0 0 28px 0; max-width: 1400px; color: var(--ink-2); }
+  .arch-canvas { flex: 1; border: 1px solid var(--rule); background: #f8fafc; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .arch-canvas img { width: 100%; height: 100%; object-fit: contain; }
+
+  /* Slide 4 — Pipeline */
+  .s-pipeline { padding: 132px 96px 96px 96px; }
+  .pipeline-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin: 56px 0 56px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .stage { padding: 28px 18px; border-right: 1px solid var(--rule); position: relative; }
+  .stage:last-child { border-right: none; }
+  .stage .lbl { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 12px; font-weight: 600; }
+  .stage .name { font-family: 'IBM Plex Serif', serif; font-size: 26px; font-weight: 500; color: var(--ink-0); letter-spacing: -0.01em; }
+  .stage .sub { font-size: 14px; color: var(--ink-2); margin-top: 8px; font-weight: 400; }
+  .stage.map .name { color: var(--accent); }
+  .stage.map .lbl { color: var(--accent); }
+  .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .why { padding: 28px 28px 28px 0; border-right: 1px solid var(--rule); padding-left: 28px; }
+  .why:last-child { border-right: none; }
+  .why h4 { font-family: 'Inter', sans-serif; font-size: 19px; margin: 0 0 12px 0; font-weight: 600; letter-spacing: -0.005em; color: var(--ink-0); }
+  .why p { font-size: 16px; color: var(--ink-1); line-height: 1.55; margin: 0; }
+
+  /* Slide 5 — Data layer */
+  .s-data { padding: 132px 96px 96px 96px; }
+  .data-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 32px; margin-top: 56px; }
+  .ddb { border: 1px solid var(--rule); padding: 28px 32px; }
+  .ddb h4 { font-family: 'IBM Plex Serif', serif; font-size: 24px; font-weight: 500; margin: 0 0 6px 0; }
+  .ddb .sub { color: var(--ink-2); font-size: 14px; margin: 0 0 22px 0; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em; }
+  .ddb table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  .ddb th, .ddb td { padding: 11px 12px; border-bottom: 1px solid var(--rule-soft); text-align: left; }
+  .ddb th { color: var(--ink-3); font-weight: 600; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; padding-bottom: 14px; }
+  .ddb td.k { color: var(--accent); }
+  .ddb td.gsi { color: var(--accent-2); }
+  .data-side { display: flex; flex-direction: column; gap: 16px; }
+  .data-card { border: 1px solid var(--rule); padding: 22px 26px; }
+  .data-card h4 { font-size: 19px; margin: 0 0 8px 0; font-weight: 600; color: var(--ink-0); }
+  .data-card p  { font-size: 15px; color: var(--ink-1); line-height: 1.55; margin: 0; }
+  .data-card code { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); background: rgba(56,189,248,0.07); padding: 1px 6px; }
+
+  /* Slide 6 — Reliability */
+  .s-rely { padding: 132px 96px 96px 96px; }
+  .rely-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 0; margin-top: 48px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .rely { padding: 28px 24px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); position: relative; }
+  .rely:nth-child(3n) { border-right: none; }
+  .rely:nth-last-child(-n+3) { border-bottom: none; }
+  .rely .num { position: absolute; top: 22px; right: 24px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-3); letter-spacing: 0.16em; font-weight: 600; }
+  .rely h4 { font-family: 'IBM Plex Serif', serif; font-size: 22px; font-weight: 500; margin: 0 0 10px 0; letter-spacing: -0.005em; color: var(--ink-0); }
+  .rely p  { font-size: 15px; color: var(--ink-1); line-height: 1.55; margin: 0; }
+  .rely code { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); background: rgba(56,189,248,0.07); padding: 1px 6px; }
+
+  /* Slide 7 — Numbers */
+  .s-numbers { padding: 132px 96px 96px 96px; }
+  .num-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 64px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .num-card { padding: 36px 28px; border-right: 1px solid var(--rule); }
+  .num-card:last-child { border-right: none; }
+  .num-card .lbl { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-3); font-weight: 600; text-transform: uppercase; margin-bottom: 16px; }
+  .num-card .v { font-family: 'IBM Plex Serif', serif; font-size: 84px; line-height: 1; font-weight: 500; letter-spacing: -0.02em; color: var(--ink-0); }
+  .num-card .v small { font-family: 'IBM Plex Serif', serif; font-size: 30px; color: var(--ink-2); font-weight: 400; }
+  .num-card .v.accent { color: var(--accent); }
+  .num-card .desc { font-size: 14px; color: var(--ink-2); margin-top: 18px; line-height: 1.55; }
+
+  /* Slide 8 — Team */
+  .s-team { padding: 132px 96px 96px 96px; }
+  .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 48px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .member { padding: 26px 28px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .member:nth-child(2n) { border-right: none; }
+  .member:nth-last-child(-n+2) { border-bottom: none; }
+  .member .name { font-family: 'IBM Plex Serif', serif; font-size: 24px; font-weight: 500; margin: 0; letter-spacing: -0.005em; }
+  .member .role { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); margin: 6px 0 12px 0; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+  .member .deliv { font-size: 15px; color: var(--ink-1); line-height: 1.55; margin: 0; }
+  .end-bar { margin-top: 36px; padding: 24px 36px; border: 1px solid var(--rule); display: flex; align-items: center; justify-content: space-between; }
+  .end-bar .left { font-family: 'IBM Plex Serif', serif; font-size: 24px; font-weight: 500; }
+  .end-bar .left .accent { color: var(--accent); }
+  .end-bar .right { display: flex; gap: 14px; }
+  .end-bar .link { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); padding: 8px 14px; border: 1px solid var(--rule); }
+
+  /* Print */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    body { padding: 0; background: white; }
+    .deck { gap: 0; }
+    .slide { transform: none; margin: 0; border: 0; page-break-after: always; break-after: page; }
+    .slide:last-child { page-break-after: auto; }
+  }
+</style>
+<script>
+  // Fit each slide to the viewport width. Pure CSS doesn't quite cover this
+  // because we keep the slide at canonical 1920x1080 for PPT parity.
+  function fit() {
+    const scale = Math.min((window.innerWidth - 48) / 1920, 0.95);
+    document.documentElement.style.setProperty('--fit-scale', scale);
+    // Compress the spacer below each scaled slide so the page reads tight.
+    document.querySelectorAll('.slide').forEach(s => {
+      s.style.marginBottom = `-${1080 * (1 - scale) - 24}px`;
+    });
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('DOMContentLoaded', fit);
+</script>
+</head>
+<body>
+<div class="deck">
+
+  <!-- 1 · Title -->
+  <section class="slide s-title">
+    <div class="institution">New York University · Department of Computer Science · Cloud Computing · Spring 2026</div>
+    <h1>Research Paper<br/>Summarizer.</h1>
+    <div class="accent-rule"></div>
+    <h2>A serverless, event-driven AWS platform that searches arXiv and Semantic Scholar, fetches full-text PDFs, and produces structured five-section summaries in roughly thirty seconds. Built end-to-end on managed services with zero idle cost.</h2>
+    <div class="footer-block">
+      <div class="authors">
+        Pranjal Mishra · Yang Zheng · Shreyas Sankpal · Kerry Huang
+        <small>Final project</small>
+      </div>
+      <div class="url">d24irdkbe9jj2b.cloudfront.net</div>
+    </div>
+  </section>
+
+  <!-- 2 · System at a glance -->
+  <section class="slide s-overview">
+    <div class="meta-top"><span class="left">I.  System overview</span><span class="right">01 / 08</span></div>
+    <h1 class="display">Triage is the bottleneck.</h1>
+    <p class="lede">Search engines surface relevant titles. Citation graphs reveal influence. General-purpose chat assistants will summarize a paper if the user pastes it. None of these, alone, is a workflow.</p>
+    <div class="stat-row">
+      <div class="stat-num">2.4M+</div>
+      <div class="stat-text">preprints indexed by arXiv alone, doubling roughly every decade. The platform delivers three composable capabilities on one shared backbone of chunk vectors persisted in Amazon DynamoDB.</div>
+    </div>
+    <div class="pillars">
+      <div class="pillar">
+        <div class="num">01.  SEARCH</div>
+        <h3>Multi-source ranked search.</h3>
+        <p>arXiv and Semantic Scholar invoked in parallel from a single Lambda; results deduplicated by arxivId, DOI, and normalized title in one to two seconds end to end.</p>
+      </div>
+      <div class="pillar">
+        <div class="num">02.  SUMMARIZE</div>
+        <h3>Asynchronous five-section summary.</h3>
+        <p>Objectives, methodology, results, limitations, contributions. SQS-triggered Step Functions map-reduce. Done in roughly thirty seconds for a typical paper.</p>
+      </div>
+      <div class="pillar">
+        <div class="num">03.  GROUND</div>
+        <h3>Retrieval-augmented features.</h3>
+        <p>Talk-to-PDF chat with cited chunks, related-papers ranking by cosine similarity, and a typed knowledge graph; all from the embeddings the pipeline already wrote.</p>
+      </div>
+    </div>
+    <div class="meta-bottom"><span>NYU Cloud Computing · Spring 2026</span><span>Mishra · Zheng · Sankpal · Huang</span></div>
+  </section>
+
+  <!-- 3 · Architecture -->
+  <section class="slide s-arch">
+    <div class="meta-top"><span class="left">II.  Architecture</span><span class="right">02 / 08</span></div>
+    <h1 class="h-section">Fifteen single-purpose Lambdas, six CDK stacks, three managed data stores.</h1>
+    <p class="lede">Inter-service communication restricted to API Gateway, Amazon SQS, AWS Step Functions, and Amazon DynamoDB. No Lambda directly invokes another Lambda.</p>
+    <div class="arch-canvas">
+      <img src="../diagrams/Architecture.png" alt="System architecture diagram" />
+    </div>
+    <div class="meta-bottom"><span>NYU Cloud Computing · Spring 2026</span><span>Mishra · Zheng · Sankpal · Huang</span></div>
+  </section>
+
+  <!-- 4 · Pipeline -->
+  <section class="slide s-pipeline">
+    <div class="meta-top"><span class="left">III.  Asynchronous data pipeline</span><span class="right">03 / 08</span></div>
+    <h1 class="h-section">Why a state machine, not one large Lambda.</h1>
+    <p class="lede">Map-reduce summarization is the hot path. The five-stage AWS Step Functions execution sidesteps the Lambda fifteen-minute ceiling, isolates per-chunk failures, and keeps state inputs under the 256 KB limit.</p>
+    <div class="pipeline-row">
+      <div class="stage"><div class="lbl">Stage 1</div><div class="name">FetchPDF</div><div class="sub">S3-cached</div></div>
+      <div class="stage"><div class="lbl">Stage 2</div><div class="name">ExtractText</div><div class="sub">pdf-parse</div></div>
+      <div class="stage"><div class="lbl">Stage 3</div><div class="name">Chunk + Embed</div><div class="sub">~1500 tok / chunk, 400 char overlap</div></div>
+      <div class="stage map"><div class="lbl">Stage 4 · Map</div><div class="name">MapSummarize</div><div class="sub">parallel, capped at 5</div></div>
+      <div class="stage"><div class="lbl">Stage 5</div><div class="name">ReduceSummary</div><div class="sub">DynamoDB write</div></div>
+    </div>
+    <div class="why-grid">
+      <div class="why">
+        <h4>Past the fifteen-minute Lambda ceiling.</h4>
+        <p>A thirty-page paper, twelve parallel chunks, plus reduction can blow past it. Step Functions has no such limit; long-running orchestration becomes free.</p>
+      </div>
+      <div class="why">
+        <h4>Per-chunk retry, not per-job.</h4>
+        <p>If one Bedrock call is throttled, that chunk retries with exponential backoff. The other eleven succeed once, and exactly once. No duplicate work, no whole-job redo.</p>
+      </div>
+      <div class="why">
+        <h4>S3 keys, not text, in state.</h4>
+        <p>Step Functions caps state inputs at 256 KB. Heavy data (PDFs, extracted text, chunks, embeddings) lives in S3. We thread only S3 keys, never bytes.</p>
+      </div>
+    </div>
+    <div class="meta-bottom"><span>NYU Cloud Computing · Spring 2026</span><span>Mishra · Zheng · Sankpal · Huang</span></div>
+  </section>
+
+  <!-- 5 · Data layer -->
+  <section class="slide s-data">
+    <div class="meta-top"><span class="left">IV.  Data layer · single-table design</span><span class="right">04 / 08</span></div>
+    <h1 class="h-section">One DynamoDB table. One global secondary index. Every access pattern.</h1>
+    <p class="lede">Access patterns are narrow and known in advance. A single-table layout with one GSI keyed on a content hash handles every read, with single-digit-millisecond latency under on-demand billing.</p>
+    <div class="data-grid">
+      <div class="ddb">
+        <h4>MainTable</h4>
+        <p class="sub">PK = USER#&lt;userId&gt;.  SK prefix encodes entity type.</p>
+        <table>
+          <thead><tr><th>PK</th><th>SK</th><th>Item</th></tr></thead>
+          <tbody>
+            <tr><td class="k">USER#u123</td><td>PROFILE#</td><td>quota, plan</td></tr>
+            <tr><td class="k">USER#u123</td><td>JOB#j789</td><td>summary, sections, meanEmbedding</td></tr>
+            <tr><td class="k">JOB#j789</td><td>CHUNK#0</td><td>text, 1024-d Titan v2 vector</td></tr>
+            <tr><td class="k">JOB#j789</td><td>CHUNK#1</td><td>text, vector</td></tr>
+            <tr><td class="gsi">GSI1: PAPER#&lt;sha256&gt;</td><td>JOB#j789</td><td>cross-user content-hash dedup</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="data-side">
+        <div class="data-card">
+          <h4>Content-hash deduplication via GSI1.</h4>
+          <p>A second user submitting a paper a first user already summarized triggers a GSI1 lookup, copies the existing JOB record, and refunds the second user's quota. Roughly <code>$0.20</code> saved per duplicate.</p>
+        </div>
+        <div class="data-card">
+          <h4>Two S3 buckets, distinct postures.</h4>
+          <p>Frontend bucket: private, served only via CloudFront Origin Access Control. PDFs bucket: <code>30-day IA transition</code>, <code>90-day expiration</code>. Storage cost stays flat; copyright concerns mitigated.</p>
+        </div>
+        <div class="data-card">
+          <h4>Encryption and on-demand billing.</h4>
+          <p>AWS-managed KMS at rest. On-demand DynamoDB billing means storage cost scales with actual usage. Block-public-access enabled on every bucket.</p>
+        </div>
+      </div>
+    </div>
+    <div class="meta-bottom"><span>NYU Cloud Computing · Spring 2026</span><span>Mishra · Zheng · Sankpal · Huang</span></div>
+  </section>
+
+  <!-- 6 · Reliability -->
+  <section class="slide s-rely">
+    <div class="meta-top"><span class="left">V.  Reliability, observability, IAM</span><span class="right">05 / 08</span></div>
+    <h1 class="h-section">Every cross-service call has an explicit failure path.</h1>
+    <p class="lede">Idempotent writes, bounded retries, dead-letter quarantine, alarmed observability, least-privilege IAM. Six properties the rubric asks for and the system actually exhibits.</p>
+    <div class="rely-grid">
+      <div class="rely">
+        <div class="num">01</div>
+        <h4>Idempotent by construction.</h4>
+        <p>The Step Functions execution name is derived from <code>jobId</code>; an SQS redrive is rejected as a duplicate. Every DynamoDB write keys on jobId so a replay never corrupts state.</p>
+      </div>
+      <div class="rely">
+        <div class="num">02</div>
+        <h4>Retry where it makes sense, DLQ where it does not.</h4>
+        <p>Step Functions retries each task with exponential backoff. The SQS redrive policy moves messages to a dead-letter queue after three failed attempts. No infinite-retry loops.</p>
+      </div>
+      <div class="rely">
+        <div class="num">03</div>
+        <h4>Failures surface, never vanish.</h4>
+        <p>A <code>MarkFailed</code> state catches any uncaught error from any prior state, captures the cause, and updates the JOB record to status <code>"failed"</code> with the message. The user sees a clean failure with a reason.</p>
+      </div>
+      <div class="rely">
+        <div class="num">04</div>
+        <h4>Observability across every Lambda.</h4>
+        <p>Four CloudWatch alarms (DLQ depth, SF failure count, pipeline errors, API errors) wired to SNS email. AWS X-Ray distributed tracing on every function. AWS Budgets alarm at <code>$50</code> per month.</p>
+      </div>
+      <div class="rely">
+        <div class="num">05</div>
+        <h4>Least-privilege IAM, per function.</h4>
+        <p><code>searchFn</code> cannot read the PDFs bucket. <code>getSummaryFn</code> cannot write DynamoDB. <code>mapSummarize</code> cannot read Cognito. Each Lambda carries its own role with the narrowest permissions it needs.</p>
+      </div>
+      <div class="rely">
+        <div class="num">06</div>
+        <h4>No Lambda-to-Lambda direct calls.</h4>
+        <p>Inter-service communication is API Gateway, Amazon SQS, AWS Step Functions, or Amazon DynamoDB. Never <code>lambda.invoke</code>. A defect in one service cannot cascade into another by direct function call.</p>
+      </div>
+    </div>
+    <div class="meta-bottom"><span>NYU Cloud Computing · Spring 2026</span><span>Mishra · Zheng · Sankpal · Huang</span></div>
+  </section>
+
+  <!-- 7 · Numbers -->
+  <section class="slide s-numbers">
+    <div class="meta-top"><span class="left">VI.  Evaluation</span><span class="right">06 / 08</span></div>
+    <h1 class="h-section">Measured against real arXiv submissions.</h1>
+    <p class="lede">Numbers below are drawn from CloudWatch metrics and DynamoDB on the live deployment. Not benchmarks. Not promises.</p>
+    <div class="num-grid">
+      <div class="num-card">
+        <div class="lbl">End-to-end summary</div>
+        <div class="v accent">27&ndash;50<small> s</small></div>
+        <div class="desc">Submit to "done", chunked, parallel-summarized, reduced. Wall-clock dominated by the slowest chunk plus reduction, not by chunk count.</div>
+      </div>
+      <div class="num-card">
+        <div class="lbl">Marginal cost</div>
+        <div class="v">$0.20</div>
+        <div class="desc">per paper, dominated by Bedrock tokens. Repeat submissions are free via content-hash deduplication on GSI1.</div>
+      </div>
+      <div class="num-card">
+        <div class="lbl">Idle monthly cost</div>
+        <div class="v">$0.00</div>
+        <div class="desc">Every component except Bedrock fits the AWS free tier at our scale. No traffic, no bill. By design, not by accident.</div>
+      </div>
+      <div class="num-card">
+        <div class="lbl">DLQ messages</div>
+        <div class="v">0</div>
+        <div class="desc">Messages stuck in the dead-letter queue across the deployment. Every failure surfaces with a cause string written to the JOB record.</div>
+      </div>
+    </div>
+    <div class="meta-bottom"><span>NYU Cloud Computing · Spring 2026</span><span>Mishra · Zheng · Sankpal · Huang</span></div>
+  </section>
+
+  <!-- 8 · Team + Thanks -->
+  <section class="slide s-team">
+    <div class="meta-top"><span class="left">VII.  Team and resources</span><span class="right">07 / 08</span></div>
+    <h1 class="h-section">Built by four people, owned end to end.</h1>
+    <div class="team-grid">
+      <div class="member">
+        <p class="name">Pranjal Mishra</p>
+        <p class="role">Architecture, frontend, RAG, ops</p>
+        <p class="deliv">Six CDK stacks, the Next.js frontend, the AWS Step Functions state machine, Amazon Bedrock integration, RAG chat with cited chunks, the knowledge graph extractor and visualization, the CloudWatch dashboard, four alarms, AWS X-Ray tracing, AWS Budgets, the deploy automation.</p>
+      </div>
+      <div class="member">
+        <p class="name">Yang Zheng</p>
+        <p class="role">Search service</p>
+        <p class="deliv">searchFn Lambda, the arXiv API client, the Atom XML parser, parameter validation with structured error handling, and 14 vitest unit tests covering query construction, Atom parsing, and handler edge cases.</p>
+      </div>
+      <div class="member">
+        <p class="name">Shreyas Sankpal</p>
+        <p class="role">Pipeline orchestration</p>
+        <p class="deliv">Pipeline orchestration design discussions and chunking-strategy review for the map-reduce summarization stages.</p>
+      </div>
+      <div class="member">
+        <p class="name">Kerry Huang</p>
+        <p class="role">Auth and API surface</p>
+        <p class="deliv">Authentication and API design discussions for the Amazon Cognito User Pool, the Secure Remote Password login flow, and the API Gateway authorizer surface.</p>
+      </div>
+    </div>
+    <div class="end-bar">
+      <div class="left">Thank you. <span class="accent">Live demonstration follows.</span></div>
+      <div class="right">
+        <div class="link">d24irdkbe9jj2b.cloudfront.net</div>
+        <div class="link">github.com/pmxlr8/research-summarizer</div>
+      </div>
+    </div>
+    <div class="meta-bottom"><span>NYU Cloud Computing · Spring 2026</span><span>Mishra · Zheng · Sankpal · Huang</span></div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -57,3 +57,6 @@ venv/
 
 # CDK deploy outputs (contains real AWS resource IDs)
 infra/cdk-outputs.json
+
+# Personal — never commit (portfolio, resume, internship handoff materials)
+personal/
