@@ -23,7 +23,18 @@ The full IEEE-format report (8 pages, two-column, 7 figures) is at **[docs/Final
 
 ## Author
 
-**Pranjal Mishra** — sole architect and engineer. Designed and built the entire system: the six AWS CDK stacks, the Next.js frontend, the Step Functions summarization pipeline, the Amazon Bedrock integration, the RAG chat, the knowledge graph extractor, the search service, the auth and API layer, the operational layer, and the deploy automation.
+**Pranjal Mishra** — designed and built the entire system end to end:
+
+- **Infrastructure** — all six AWS CDK stacks (Auth, Data, Pipeline, API, Frontend, Ops) and the one-command deploy automation
+- **Pipeline** — the SQS-triggered Step Functions summarization pipeline (Fetch → Extract → Chunk → MapSummarize → Reduce), including idempotency, retries, and the dead-letter path
+- **Data** — the DynamoDB single-table schema with GSI1 content-hash deduplication and per-user quota
+- **LLM layer** — the Amazon Bedrock integration (Qwen + Claude Sonnet + Titan embeddings), the RAG chat with cited chunks, and the knowledge-graph extractor
+- **Search** — the multi-source arXiv + Semantic Scholar search service with dedup
+- **Auth & API** — the Cognito user pool, SRP auth, and the API Gateway authorizer surface
+- **Frontend** — the entire Next.js application, including the React Flow knowledge-graph UI
+- **Ops** — the CloudWatch dashboard, alarms, X-Ray tracing, and AWS Budgets
+
+Yang Zheng, Shreyas Sankpal, and Kerry Huang contributed course documentation and progress reports.
 
 > NYU Cloud Computing, Spring 2026 final project — graded **A**.
 
