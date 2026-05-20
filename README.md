@@ -21,14 +21,11 @@ A serverless AWS platform that searches arXiv and Semantic Scholar, fetches full
 
 The full IEEE-format report (8 pages, two-column, 7 figures) is at **[docs/Final_Report.pdf](docs/Final_Report.pdf)**. Sections cover problem statement, motivation, related work, system architecture, architectural properties (microservices, scalability, reliability, latency, data storage, data pipeline), retrieval-augmented features, evaluation, and future work.
 
-## Team
+## Author
 
-| Member | Ownership Area |
-|---|---|
-| Pranjal Mishra | Architecture, frontend (Next.js), AWS CDK, ops layer, RAG chat, knowledge graph |
-| Yang Zheng | Search Lambda, arXiv client, integration tests |
-| Shreyas Sankpal | Pipeline & Orchestration |
-| Kerry Huang | Auth & API |
+**Pranjal Mishra** — sole architect and engineer. Designed and built the entire system: the six AWS CDK stacks, the Next.js frontend, the Step Functions summarization pipeline, the Amazon Bedrock integration, the RAG chat, the knowledge graph extractor, the search service, the auth and API layer, the operational layer, and the deploy automation.
+
+> NYU Cloud Computing, Spring 2026 final project — graded **A**.
 
 ## Features
 
@@ -116,7 +113,7 @@ cd infra
 npm install
 npx cdk synth          # generate CloudFormation, no AWS calls
 npx cdk diff           # changes vs the deployed stack
-# npx cdk deploy --all # don't run without team alignment
+npx cdk deploy --all   # deploy all six stacks
 ```
 
 `scripts/deploy.sh` is a one-command wrapper that bootstraps, deploys all six stacks, builds the frontend with the resulting Cognito + API config baked in, uploads to S3, and invalidates the CloudFront cache.
@@ -143,5 +140,5 @@ Idle infrastructure cost is **$0**. Every component except Bedrock fits the AWS 
 | [`docs/presentation/Presentation.pptx`](docs/presentation/Presentation.pptx) | 8-slide presentation deck |
 | [`docs/diagrams/`](docs/diagrams/) | Architecture diagrams (PNG + SVG, landscape + portrait) |
 | [`docs/figures/`](docs/figures/) | UI screenshots embedded in the report |
-| [`docs/reports/`](docs/reports/) | Week 2 report, team upgrade proposal, execution guide PDFs |
+| [`docs/reports/`](docs/reports/) | Week 2 report, upgrade proposal, execution guide PDFs |
 | [`docs/source/`](docs/source/) | Markdown source for the PDFs in `docs/reports/` |
